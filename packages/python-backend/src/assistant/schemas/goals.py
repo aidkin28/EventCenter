@@ -75,3 +75,124 @@ class UpdateParseResponse(BaseModel):
     sentiment: str = Field(..., description="positive, neutral, or negative")
     momentum_score: int = Field(..., ge=1, le=10, description="Overall momentum/progress score")
     summary: str = Field(..., description="Brief summary of the update")
+
+
+# ============================================
+# ACTIVITY EXTRACTION SCHEMAS (for /update page)
+# ============================================
+
+# Valid activity types
+VALID_ACTIVITY_TYPES = [
+    "experiments",
+    "product_demos",
+    "mentoring",
+    "presentations",
+    "volunteering",
+    "general_task",
+    "research_learning",
+    "networking",
+]
+
+
+class ExtractActivityRequest(BaseModel):
+    """Request schema for extracting activities from daily update text."""
+
+    raw_text: str = Field(..., description="Free-form update text from user")
+    user_timezone: str = Field(default="UTC", description="User's timezone for date inference")
+
+
+class ExtractedActivityItem(BaseModel):
+    """A single extracted activity with category and quantity."""
+
+    activity_type: str = Field(
+        ...,
+        description="Category: experiments, product_demos, mentoring, presentations, volunteering, general_task, research_learning, or networking"
+    )
+    quantity: float = Field(default=1.0, description="Number of activities (default 1)")
+    summary: str = Field(..., description="Brief description of the activity")
+    activity_date: str = Field(..., description="ISO date string (YYYY-MM-DD)")
+
+
+class ExtractActivitiesResponse(BaseModel):
+    """Response schema for extracted activities."""
+
+    activities: list[ExtractedActivityItem] = Field(default_factory=list)
+    raw_summary: str = Field(..., description="Summary of the raw text input")
+
+
+# ============================================
+# FOLLOW-UP SCHEMAS
+# ============================================
+
+class ProposedFollowUp(BaseModel):
+    """A proposed follow-up for an extracted activity."""
+
+    activity_index: int = Field(..., description="0-based index of activity in the activities list")
+    activity_type: str = Field(default="", description="Activity type from the linked activity")
+    title: str = Field(..., max_length=255, description="Short title for the follow-up reminder")
+    summary: str = Field(..., description="Why this follow-up is valuable")
+    suggested_days: Optional[int] = Field(None, description="Suggested days until follow-up")
+
+
+class FollowUpConfirmationResult(BaseModel):
+    """Result of user confirming/dismissing follow-up proposals."""
+
+    approved_indices: list[int] = Field(default_factory=list, description="Indices of approved follow-ups")
+    dismissed_indices: list[int] = Field(default_factory=list, description="Indices of dismissed follow-ups")
+    session_id: str = Field(..., description="Chat session ID")
+
+
+# ============================================
+# CONVERSATIONAL UPDATE SCHEMAS
+# ============================================
+
+class ChatMessage(BaseModel):
+    """A single chat message in the conversation."""
+
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+
+
+class ConversationalUpdateRequest(BaseModel):
+    """Request schema for conversational update extraction."""
+
+    session_id: str = Field(..., description="Unique session ID for chat history")
+    user_message: str = Field(..., description="User's message in the conversation")
+    user_timezone: str = Field(default="UTC", description="User's timezone for date inference")
+
+
+class ConversationalUpdateResponse(BaseModel):
+    """Response schema for conversational update."""
+
+    session_id: str
+    assistant_message: str = Field(..., description="Assistant's response message")
+    needs_clarification: bool = Field(
+        default=False,
+        description="True if the assistant needs more info from user"
+    )
+    activities: list[ExtractedActivityItem] = Field(
+        default_factory=list,
+        description="Extracted activities (only populated when extraction is complete)"
+    )
+    raw_summary: str = Field(default="", description="Summary of extracted activities")
+    chat_history: list[ChatMessage] = Field(
+        default_factory=list,
+        description="Full chat history for this session"
+    )
+    # Follow-up proposal fields
+    proposed_follow_ups: list[ProposedFollowUp] = Field(
+        default_factory=list,
+        description="Proposed follow-ups for extracted activities"
+    )
+    follow_up_analysis_summary: str = Field(
+        default="",
+        description="Summary of why follow-ups are proposed"
+    )
+    awaiting_followup_confirmation: bool = Field(
+        default=False,
+        description="True if waiting for user to confirm/dismiss follow-ups"
+    )
+    followup_confirmation_result: Optional[FollowUpConfirmationResult] = Field(
+        default=None,
+        description="Result when user confirms/dismisses follow-ups"
+    )

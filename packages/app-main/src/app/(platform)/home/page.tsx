@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import MoonBase from "@/public/imgs/MoonBase.png";
-import Landscape from "@/public/Landscape2.png";
-import SunsetLandscape from "@/components/heroSections/sunsetLandscape";
-import CustomGlowBorder from "@common/components/wrappers/customGlowBorder";
 import { Button } from "@common/components/ui/Button";
-import { LightWarpButton } from "@/components/ui/LightWarpButton";
-import { WarpTunnel } from "@/components/ui/WarpTunnel";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { IconTarget, IconPlus, IconTrendingUp } from "@tabler/icons-react";
+import { IconTarget, IconPlus } from "@tabler/icons-react";
 
 interface Goal {
 	id: string;
@@ -31,7 +25,6 @@ interface Goal {
 }
 
 export default function Page() {
-	const [isWarping, setIsWarping] = useState(false);
 	const [goals, setGoals] = useState<Goal[]>([]);
 	const [isLoadingGoals, setIsLoadingGoals] = useState(true);
 	const router = useRouter();
@@ -53,15 +46,6 @@ export default function Page() {
 		}
 		fetchGoals();
 	}, []);
-
-	const triggerWarp = useCallback(() => {
-		if (isWarping) return;
-		setIsWarping(true);
-	}, [isWarping]);
-
-	const handleWarpComplete = useCallback(() => {
-		router.push("/goals/new");
-	}, [router]);
 
 	const hasGoals = goals.length > 0;
 
@@ -85,8 +69,28 @@ export default function Page() {
 				</div>
 			</div>
 
+			{/* Quick Actions - centered below banner */}
+			<div className="flex justify-center gap-4 py-8">
+				<Button
+					onClick={() => router.push("/update")}
+					className="bg-primary text-primary-foreground border border-primary/20 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+					size="lg"
+				>
+					<IconPlus className="mr-2 h-5 w-5" />
+					New Update
+				</Button>
+				<Button
+					onClick={() => router.push("/goals/new")}
+					className="bg-primary text-primary-foreground border border-primary/20 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+					size="lg"
+				>
+					<IconTarget className="mr-2 h-5 w-5" />
+					New Goal
+				</Button>
+			</div>
+
 			{/* Goals Section */}
-			<div className="container max-w-6xl py-8 space-y-8">
+			<div className="container max-w-6xl pb-8 space-y-8">
 				{/* Active Goals */}
 				<section>
 					<div className="flex items-center justify-between mb-4">
@@ -94,10 +98,6 @@ export default function Page() {
 							<IconTarget className="h-6 w-6 text-primary" />
 							<h2 className="text-2xl font-bold">Your Active Goals</h2>
 						</div>
-						<Button variant="outline" onClick={() => router.push("/goals/new")}>
-							<IconPlus className="mr-2 h-4 w-4" />
-							New Goal
-						</Button>
 					</div>
 
 					{isLoadingGoals ? (
@@ -119,104 +119,19 @@ export default function Page() {
 							))}
 						</div>
 					) : (
-						/* No goals - show CTA with landscape */
-						<SunsetLandscape
-							backgroundSrc={Landscape}
-							foregroundSrc={undefined}
-							featherWidth="0%"
-							containerClassName="p-3 md:p-4 xl:p-8"
-							contentClassName="flex flex-col gap-4 min-[801px]:top-6 min-[801px]:right-6 min-[801px]:translate-y-0 min-[801px]:mt-6 min-[801px]:mr-14 min-[801px]:pr-0 flex justify-end"
-						>
-							<div className="relative z-9999 flex flex-col gap-4">
-								<motion.div
-									animate={
-										isWarping
-											? {
-													x: 600,
-													y: -600,
-													rotate: 25,
-													scale: 1.5,
-													opacity: 0,
-												}
-											: { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 }
-									}
-									transition={{
-										type: "spring",
-										stiffness: 50,
-										damping: 15,
-										mass: 1,
-										bounce: 0.5,
-										duration: 1,
-										delay: 0.5,
-									}}
-								>
-									<CustomGlowBorder
-										glowColor="255, 225, 170"
-										glowBlendMode=""
-										glowOpacity={undefined}
-										borderWidth={2}
-										borderGlowRadius={100}
-										innerGlowRadius={200}
-										innerGlowIntensity={0.2}
-										glassClassName="bg-[#ffd7ad] opacity-[35%] rounded-xl"
-										className="backdrop-blur-[6px]"
-										borderBackground="linear-gradient(290deg, #6c249f, #7b2121, #bc5e16)"
-									>
-										<div className="z-40 p-4 text-[#283b59] flex flex-col gap-4">
-											<h1 className="text-4xl font-bold">Goals are useless without action and progress tracking.</h1>
-											<p className="text-2xl font-normal text-black">
-												Set relevant goals, track your progress, and get coaching. Our AI agents will parse and create records from your reports of the day,
-												helping you stay targeted and motivated to achieve your goals.
-											</p>
-										</div>
-									</CustomGlowBorder>
-								</motion.div>
-
-								<motion.div
-									animate={
-										isWarping
-											? {
-													x: 800,
-													y: -300,
-													rotate: -15,
-													scale: 1.2,
-													opacity: 0,
-												}
-											: { x: 0, y: 0, rotate: 0, scale: 1, opacity: 1 }
-									}
-									transition={{
-										type: "spring",
-										stiffness: 40,
-										damping: 12,
-										mass: 1.2,
-										bounce: 0.6,
-										delay: 0.25,
-										duration: 1,
-									}}
-									onClick={triggerWarp}
-									className="w-full cursor-pointer"
-								>
-									<LightWarpButton className="w-full z-9999">
-										<CustomGlowBorder
-											glowColor="255, 225, 170"
-											glowBlendMode=""
-											glowOpacity={undefined}
-											borderWidth={2}
-											borderGlowRadius={100}
-											innerGlowRadius={200}
-											innerGlowIntensity={0.2}
-											glassClassName="bg-off-white opacity-[80%] rounded-xl"
-											className="backdrop-blur-[6px] w-full"
-											borderBackground="linear-gradient(290deg, #6c249f, #7b2121, #bc5e16)"
-										>
-											<Button variant="blank" size="lg" innerClassName="text-black" className="border-none bg-transparent cursor-pointer w-full">
-												<span className="text-xl min-h-[55px] flex items-center justify-center text-black">Add First Goal</span>
-											</Button>
-										</CustomGlowBorder>
-									</LightWarpButton>
-								</motion.div>
-							</div>
-						</SunsetLandscape>
+						<Card className="border-dashed">
+							<CardContent className="py-12 text-center">
+								<IconTarget className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+								<h3 className="text-lg font-medium mb-2">No active goals yet</h3>
+								<p className="text-muted-foreground mb-4">
+									Set your first goal and start tracking your progress.
+								</p>
+								<Button onClick={() => router.push("/goals/new")}>
+									<IconPlus className="mr-2 h-4 w-4" />
+									Create Your First Goal
+								</Button>
+							</CardContent>
+						</Card>
 					)}
 				</section>
 
@@ -262,23 +177,6 @@ export default function Page() {
 					</section>
 				)}
 			</div>
-
-			{/* Warp Tunnel Transition */}
-			<WarpTunnel
-				isActive={isWarping}
-				onComplete={handleWarpComplete}
-				initialSettings={{
-					baseHueRotate: 38,
-					baseRotateRateZ: 11,
-					animationDuration: 2.5,
-					animationSpeedDuration: 30,
-					imagePath: "/warp1.jpg",
-					warpSceneFadeInDuration: 0.2,
-					fadeToBlackDuration: 2,
-					fadeOutDuration: 0.5,
-					fadeInTogether: false,
-				}}
-			/>
 		</>
 	);
 }

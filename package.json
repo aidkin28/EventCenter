@@ -11,7 +11,7 @@
 		"prisma:generate": "prisma generate",
 		"prisma:push": "prisma db push",
 		"prisma:seed": "cd packages/database && pnpm tsx prisma/seed.ts",
-		"python:dev": "cd packages/python-backend/src && dotenv -e ../../../.env -v PYTHONPATH=. -- uv run uvicorn assistant.main:app --reload --port 8000",
+		"python:dev": "cd packages/python-backend/src && dotenv -e ../../../.env -v PYTHONPATH=. -- uv run uvicorn assistant.main:app --reload --reload-dir assistant --port 8000",
 		"python:install": "cd packages/python-backend && uv sync",
 		"generate:types": "tsx scripts/generate-types.ts"
 	},

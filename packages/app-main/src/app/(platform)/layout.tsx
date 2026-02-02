@@ -14,8 +14,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 					<PageContentContainer
 						className="flex flex-col items-center justify-between bg-background min-h-screen"
 						variant="blank"
-						considerSideMenu={false}
-						useUIState={false}
+						considerSideMenu={true}
+						useUIState={true}
 					>
 						<div className="w-full flex-1">{children}</div>
 						<LegalFooter className="px-4" />

@@ -210,6 +210,27 @@ body {
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+}
+
+/* Rotating gradient border - @property based animation */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes gradient-rotate {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
 }
 
 @layer components {

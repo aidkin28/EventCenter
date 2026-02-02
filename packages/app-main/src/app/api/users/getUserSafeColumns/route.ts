@@ -1,35 +1,37 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { retainSafeKeys } from "@/lib/utils";
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
 
 /**
- * GET /api/users/getUserSafeColumns - Fetch users with only safe columns
+ * GET /api/users/getUserSafeColumns - Fetch current user with safe columns
  */
 export async function GET() {
   const authResult = await requireAuth();
   if (!authResult.success) return authResult.response;
+  const { user: authUser } = authResult;
 
   try {
-    const users = await prisma.user.findMany();
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        role: true,
+        activeTeamId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-    // Define the safe keys to retain
-    const safeKeys = [
-      "id",
-      "name",
-      "email",
-      "emailVerified",
-      "image",
-      "role",
-      "createdAt",
-      "updatedAt",
-    ];
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-    // Strip users objects to only include safe keys
-    const safeUsers = retainSafeKeys(users, safeKeys);
-
-    return NextResponse.json(safeUsers);
+    return NextResponse.json(user);
   } catch (error) {
     return handleApiError(error, "users:GET");
   }

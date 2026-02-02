@@ -24,7 +24,7 @@ export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(({ class
       className={cn("flex w-full items-center justify-between px-4 pb-4 pt-8 text-[10px] lg:px-3", className, makeMultiLine && "flex-col")}
     >
       <span className={cn("text-gray-600 pr-1", makeMultiLine && "pr-0 pb-1")}>
-        {process.env.NEXT_PUBLIC_APP_TITLE} and the check folder logo are trademarks of {process.env.NEXT_PUBLIC_APP_TITLE} Inc. ©{" "}
+        {process.env.NEXT_PUBLIC_APP_TITLE} trademarks of {process.env.NEXT_PUBLIC_APP_TITLE} Inc. ©{" "}
         {new Date().getFullYear()} {process.env.NEXT_PUBLIC_APP_TITLE} Inc. All rights reserved.
       </span>
       <div className={cn("flex items-center gap-x-1", makeMultiLine && "w-full justify-between")}>

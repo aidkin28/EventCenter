@@ -6,6 +6,7 @@ import { TooltipWrapper } from "@common/components/ui/TooltipWrapper";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
+  Bell,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -14,6 +15,8 @@ import {
   Settings,
   Home,
   Sparkles,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,8 +35,6 @@ interface SideMenuProps {
 const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-  const [showExpandButton, setShowExpandButton] = useState(false);
-  const [mouseX, setMouseX] = useState(0);
 
   const { sideMenuOpen, setSideMenuOpen } = useUIStore();
   const { user, signOut, fetchUser, isLoading } = useUserStore();
@@ -43,31 +44,19 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
     fetchUser();
   }, [fetchUser]);
 
-  // Track mouse position to show/hide expand button
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-
-      // Show button if mouse is within 10px of left edge
-      if (e.clientX <= 10 && !sideMenuOpen) {
-        setShowExpandButton(true);
-      }
-      // Hide button if mouse is beyond 80px from left edge and menu is closed
-      else if (e.clientX > 80 && !sideMenuOpen) {
-        setShowExpandButton(false);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [sideMenuOpen]);
-
   const iconSize = 20;
 
+  // Build main nav items - conditionally include Team Stats if user has active team
   const mainNavItems: NavItem[] = [
     { href: "/home", icon: <Home size={iconSize} />, label: "Home" },
     { href: "/dashboard", icon: <BarChart3 size={iconSize} />, label: "Dashboard" },
     { href: "/chat", icon: <MessageCircle size={iconSize} />, label: "Chat" },
+    { href: "/follow-ups", icon: <Bell size={iconSize} />, label: "Follow-ups" },
+    { href: "/stats", icon: <TrendingUp size={iconSize} />, label: "My Stats" },
+    // Add Team Stats if user has an active team
+    ...(user?.activeTeamId
+      ? [{ href: `/admin/teams/${user.activeTeamId}/stats`, icon: <Users size={iconSize} />, label: "Team Stats" }]
+      : []),
   ];
 
   const bottomNavItems: NavItem[] = [
@@ -119,45 +108,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
 
   return (
     <>
-      {/* Invisible trigger area - 10px from left edge */}
-      {!sideMenuOpen && (
-        <div
-          className="fixed left-0 top-0 h-full w-[10px] z-[100]"
-          onMouseEnter={() => setShowExpandButton(true)}
-        />
-      )}
-
-      {/* Expand button - appears on hover */}
-      <div
-        className={cn(
-          "fixed top-1/2 -translate-y-1/2 z-[110] transition-all duration-300",
-          sideMenuOpen ? "left-[216px]" : "left-0",
-          (showExpandButton || sideMenuOpen)
-            ? "opacity-100 translate-x-0"
-            : "opacity-0 -translate-x-full pointer-events-none"
-        )}
-      >
-        <TooltipWrapper
-          tooltipText={sideMenuOpen ? "Collapse menu" : "Expand menu"}
-          side="right"
-          sideOffset={10}
-        >
-          <button
-            onClick={handleExpandClick}
-            className={cn(
-              "w-8 h-8 rounded-full cursor-pointer",
-              "bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/30 dark:border-slate-700/30",
-              "flex items-center justify-center",
-              "text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-white/90 dark:hover:bg-slate-800/90",
-              "shadow-md transition-all duration-200"
-            )}
-          >
-            {sideMenuOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
-        </TooltipWrapper>
-      </div>
-
-      {/* Side menu with glass effect */}
+      {/* Side menu - always visible, expands/collapses */}
       <aside
         className={cn(
           isFixed ? "fixed" : "absolute",
@@ -165,13 +116,13 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
           "bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl",
           "border-r border-white/30 dark:border-slate-700/30",
           "transition-all duration-300 ease-out",
-          sideMenuOpen ? "w-[220px]" : "w-0 overflow-hidden"
+          sideMenuOpen ? "w-[220px]" : "w-[60px]"
         )}
       >
         {/* Logo/Brand */}
         <div className="p-4 border-b border-white/20 dark:border-slate-700/20">
           <Link href="/home" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm shrink-0">
               <Sparkles size={18} className="text-primary-foreground" />
             </div>
             {sideMenuOpen && (
@@ -243,6 +194,29 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Expand/Collapse Button - inside sidebar at bottom */}
+        <div className="p-3 border-t border-white/20 dark:border-slate-700/20 flex justify-center">
+          <TooltipWrapper
+            tooltipText={sideMenuOpen ? "Collapse menu" : "Expand menu"}
+            side="right"
+            sideOffset={10}
+            disabled={sideMenuOpen}
+          >
+            <button
+              onClick={handleExpandClick}
+              className={cn(
+                "w-8 h-8 rounded-full cursor-pointer",
+                "bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/30 dark:border-slate-700/30",
+                "flex items-center justify-center",
+                "text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-white/90 dark:hover:bg-slate-800/90",
+                "shadow-md transition-all duration-200"
+              )}
+            >
+              {sideMenuOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </TooltipWrapper>
         </div>
       </aside>
     </>

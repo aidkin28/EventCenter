@@ -9,6 +9,7 @@ interface User {
   image?: string | null;
   emailVerified: boolean;
   role?: string;
+  activeTeamId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,13 +50,14 @@ export const useUserStore = create<UserState>((set, get) => ({
       console.log("\n\n\n\nsession", session);
 
       if (session?.data?.user) {
-        // Better-auth has the session, now fetch the full profile from Convex to get the role
-        // This ensures the role is always synced with the database
+        // Better-auth has the session, now fetch the full profile to get role and activeTeamId
+        // This ensures the data is always synced with the database
         const safeUser = await fetch("/api/users/getUserSafeColumns").then(res => res.json());
 
         const userData: User = {
 					...(session.data.user as User),
 					role: safeUser.role,
+					activeTeamId: safeUser.activeTeamId,
 				};
 
         set({

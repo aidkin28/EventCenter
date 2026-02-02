@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
-import { IconH1, IconLoader } from "@tabler/icons-react";
+import { IconLoader, IconLock } from "@tabler/icons-react";
 import { Separator } from "@/src/components/ui/separator";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { toast } from "@common/components/ui/sonner";
 
 import { authClient } from "@/src/lib/auth-client";
 
@@ -20,6 +21,13 @@ export default function Page() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   async function getUser() {
     const { data: session } = await authClient.getSession();
@@ -36,6 +44,47 @@ export default function Page() {
       setEmail(data?.user?.email ?? "");
     });
   }, []);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+
+    // Validation
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords don't match");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const result = await authClient.changePassword({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true,
+      });
+
+      if (result.error) {
+        setPasswordError(result.error.message || "Failed to change password");
+        return;
+      }
+
+      toast.success("Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setPasswordError(
+        err instanceof Error ? err.message : "Failed to change password"
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   return !email ? (
     <div className="px-4 lg:px-6 lg:w-1/2 grid gap-4">
@@ -91,13 +140,76 @@ export default function Page() {
               </Button>
             </div>
           </div>
-          <div className="mt-4 text-center text-sm">
-            Forgot your password?{" "}
-            <a href="/login" className="underline underline-offset-4">
-              Reset password
-            </a>
-          </div>
         </form>
+
+        {/* Password Change Section */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <IconLock className="h-5 w-5" />
+            <h2 className="text-lg font-medium">Change Password</h2>
+          </div>
+          <Separator className="mb-4" />
+
+          <form onSubmit={handlePasswordChange} className="lg:w-1/2">
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  required
+                  minLength={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isChangingPassword}
+                className="w-full"
+              >
+                {isChangingPassword ? (
+                  <IconLoader className="animate-spin" stroke={2} />
+                ) : (
+                  "Change Password"
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </>
   );

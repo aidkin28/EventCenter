@@ -90,6 +90,18 @@ model user {
   goals               Goal[]               @relation("UserGoals")
   goalUpdates         GoalUpdate[]
 
+  // Team relations
+  createdTeams     Team[]           @relation("TeamCreator")
+  teamMemberships  TeamMember[]
+  sentInvitations  TeamInvitation[] @relation("InvitationSender")
+  activeTeamId     String?          @map("active_team_id")
+  activeTeam       Team?            @relation("UserActiveTeam", fields: [activeTeamId], references: [id], onDelete: SetNull)
+
+  // Chat session relations
+  chatSessions     ChatSession[]
+  updateFollowUps  UpdateFollowUp[]
+  todos            UserTodo[]
+
   @@map("users")
 }
 
@@ -299,10 +311,11 @@ model GoalExpertSelection {
 // ============================================
 
 model DailyUpdate {
-  id            String @id @default(cuid())
-  userId        String @map("user_id")
-  userGoalSetId String @map("user_goal_set_id")
-  updateText    String @map("update_text") @db.Text
+  id            String  @id @default(cuid())
+  userId        String  @map("user_id")
+  userGoalSetId String? @map("user_goal_set_id") // Optional - updates can exist without goal sets
+  updateText    String  @map("update_text") @db.Text
+  teamId        String? @map("team_id")
 
   // UpdatePeriod: "morning" | "afternoon" | "evening" | "full_day"
   updatePeriod String   @map("update_period") @db.VarChar(50)
@@ -312,10 +325,13 @@ model DailyUpdate {
 
   // Relations
   user                user                @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  userGoalSet         UserGoalSet         @relation(fields: [userGoalSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userGoalSet         UserGoalSet?        @relation(fields: [userGoalSetId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team                Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
   extractedActivities ExtractedActivity[]
+  chatSession         ChatSession?
 
   @@index([userId, periodDate])
+  @@index([teamId])
   @@map("daily_updates")
 }
 
@@ -327,8 +343,9 @@ model ExtractedActivity {
   id            String @id @default(cuid())
   dailyUpdateId String @map("daily_update_id")
   userId        String @map("user_id")
+  teamId        String? @map("team_id")
 
-  // ActivityType: "experiments" | "product_demos" | "mentoring" | "presentations" | "volunteering"
+  // ActivityType: "experiments" | "product_demos" | "mentoring" | "presentations" | "volunteering" | "general_task" | "research_learning"
   activityType String   @map("activity_type") @db.VarChar(50)
   quantity     Decimal  @db.Decimal(10, 2)
   summary      String   @db.Text
@@ -343,10 +360,13 @@ model ExtractedActivity {
   // Relations
   dailyUpdate DailyUpdate @relation(fields: [dailyUpdateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user        user        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team        Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
   linkedGoal  Goal?       @relation(fields: [linkedGoalId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  followUps   UpdateFollowUp[]
 
   @@index([userId, activityDate])
   @@index([activityType])
+  @@index([teamId])
   @@map("extracted_activities")
 }
 
@@ -433,4 +453,161 @@ model AdminSettings {
 
   @@unique([adminId, settingKey])
   @@map("admin_settings")
+}
+
+// ============================================
+// TEAM MANAGEMENT
+// ============================================
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdById String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy           user              @relation("TeamCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  members             TeamMember[]
+  invitations         TeamInvitation[]
+  usersWithActiveTeam user[]            @relation("UserActiveTeam")
+  dailyUpdates        DailyUpdate[]
+  chatSessions        ChatSession[]
+  extractedActivities ExtractedActivity[]
+  followUps           UpdateFollowUp[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String   @map("team_id")
+  userId   String   @map("user_id")
+  role     String   @default("member") @db.VarChar(50) // member | admin | owner
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model TeamInvitation {
+  id          String   @id @default(cuid())
+  teamId      String   @map("team_id")
+  email       String   @db.VarChar(255)
+  status      String   @default("pending") @db.VarChar(50) // pending | accepted | expired
+  invitedById String   @map("invited_by")
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedBy user @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([email])
+  @@index([teamId])
+  @@map("team_invitations")
+}
+
+// ============================================
+// CHAT SESSION (for update wizard conversations)
+// ============================================
+
+model ChatSession {
+  id           String   @id @default(cuid())
+  sessionId    String   @unique @map("session_id")
+  userId       String   @map("user_id")
+  teamId       String?  @map("team_id")
+
+  updatePeriod String   @map("update_period") @db.VarChar(50)
+  periodDate   DateTime @map("period_date") @db.Date
+
+  startedAt    DateTime @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  status       String   @default("active") @db.VarChar(50) // active | completed | abandoned
+
+  user         user          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  messages     ChatMessage[]
+  dailyUpdate  DailyUpdate?  @relation(fields: [dailyUpdateId], references: [id])
+  dailyUpdateId String?      @unique @map("daily_update_id")
+  followUps    UpdateFollowUp[]
+
+  @@index([userId])
+  @@index([periodDate])
+  @@index([teamId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  chatSessionId String      @map("chat_session_id")
+  role          String      @db.VarChar(20) // user | assistant
+  content       String      @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId])
+  @@map("chat_messages")
+}
+
+// ============================================
+// UPDATE FOLLOW-UPS (reminders from activities)
+// ============================================
+
+model UpdateFollowUp {
+  id                  String            @id @default(cuid())
+  chatSessionId       String            @map("chat_session_id")
+  extractedActivityId String            @map("extracted_activity_id")
+  userId              String            @map("user_id")
+  teamId              String?           @map("team_id")
+
+  title               String            @db.VarChar(255)
+  summary             String            @db.Text
+  activityType        String?           @map("activity_type") @db.VarChar(50)
+
+  status              String            @default("confirmed") @db.VarChar(50) // "confirmed" | "completed" | "dismissed"
+  dueDate             DateTime?         @map("due_date") @db.Date
+  completedAt         DateTime?         @map("completed_at")
+  completedInSessionId String?          @map("completed_in_session_id")
+
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  chatSession         ChatSession       @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  extractedActivity   ExtractedActivity @relation(fields: [extractedActivityId], references: [id], onDelete: Cascade)
+  user                user              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team                Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([chatSessionId])
+  @@index([teamId, status])
+  @@map("update_follow_ups")
+}
+
+// ============================================
+// USER TODOS (general notes/tasks)
+// ============================================
+
+model UserTodo {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  content     String    @db.Text
+  status      String    @default("pending") @db.VarChar(50) // "pending" | "completed"
+  completedAt DateTime? @map("completed_at")
+  sortOrder   Int       @default(0) @map("sort_order")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user        user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, sortOrder])
+  @@map("user_todos")
 }
