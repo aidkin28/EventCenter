@@ -17,6 +17,13 @@ import {
   Sparkles,
   TrendingUp,
   Users,
+  PenLine,
+  History,
+  Target,
+  PlusCircle,
+  User,
+  Shield,
+  FlaskConical,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,17 +53,23 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
 
   const iconSize = 20;
 
-  // Build main nav items - conditionally include Team Stats if user has active team
+  // Build main nav items - showing all pages for verification
   const mainNavItems: NavItem[] = [
     { href: "/home", icon: <Home size={iconSize} />, label: "Home" },
     { href: "/dashboard", icon: <BarChart3 size={iconSize} />, label: "Dashboard" },
+    { href: "/dashboard/account", icon: <User size={iconSize} />, label: "Account" },
     { href: "/chat", icon: <MessageCircle size={iconSize} />, label: "Chat" },
     { href: "/follow-ups", icon: <Bell size={iconSize} />, label: "Follow-ups" },
     { href: "/stats", icon: <TrendingUp size={iconSize} />, label: "My Stats" },
+    { href: "/update", icon: <PenLine size={iconSize} />, label: "New Update" },
+    { href: "/update/history", icon: <History size={iconSize} />, label: "Update History" },
+    { href: "/goals/new", icon: <PlusCircle size={iconSize} />, label: "New Goal" },
+    { href: "/admin/teams", icon: <Shield size={iconSize} />, label: "Admin Teams" },
     // Add Team Stats if user has an active team
     ...(user?.activeTeamId
       ? [{ href: `/admin/teams/${user.activeTeamId}/stats`, icon: <Users size={iconSize} />, label: "Team Stats" }]
       : []),
+    { href: "/warp-test", icon: <FlaskConical size={iconSize} />, label: "Warp Test" },
   ];
 
   const bottomNavItems: NavItem[] = [

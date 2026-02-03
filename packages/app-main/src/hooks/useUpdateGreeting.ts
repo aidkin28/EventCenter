@@ -99,6 +99,10 @@ export function useUpdateGreeting(): UpdateGreeting {
       return "What did you work on yesterday?";
     }
 
+    if (diffDays <= 1 && diffHours >= 12) {
+      return `What have you been up to since yesterday?`
+    }
+
     // 1-6 days ago
     if (diffDays < 7) {
       const days = Math.ceil(diffDays);

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Button } from "@common/components/ui/Button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
@@ -567,7 +568,19 @@ export function UpdateWizard({ className, onDateChange, initialSessionId }: Upda
                       : "bg-muted"
                   )}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div
+                    className={cn(
+                      "text-sm prose prose-sm max-w-none",
+                      message.role === "user"
+                        ? "prose-invert"
+                        : "prose-neutral dark:prose-invert",
+                      "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+                      "[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5",
+                      "[&_strong]:font-semibold [&_code]:bg-black/10 [&_code]:px-1 [&_code]:rounded"
+                    )}
+                  >
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
                 </div>
               </div>
             ))}

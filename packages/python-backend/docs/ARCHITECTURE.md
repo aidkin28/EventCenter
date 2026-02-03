@@ -136,8 +136,162 @@ The system uses intelligent prompting to guide users through activity logging:
          │                  (needs_clarification: true)
          │
          └── Complete ────▶ Extract activities
-                           (needs_clarification: false)
-                           Return: activities[], raw_summary
+                           │
+                           ▼
+                    4. Analyze for follow-ups (2nd LLM call)
+                           │
+                           ├── No follow-ups ──▶ Return activities
+                           │
+                           └── Follow-ups found ──▶ Store pending + ask user
+                                                    (awaiting_followup_confirmation: true)
+```
+
+### Follow-Up Proposal System
+
+The Update Chat includes an intelligent follow-up proposal system that identifies activities that would benefit from future reminders.
+
+#### Orchestration Flow (Multi-LLM Architecture)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         UPDATE CHAT ORCHESTRATION                           │
+│                                                                             │
+│  User Message                                                               │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              LLM CALL 1: CONVERSATION ORCHESTRATOR                   │   │
+│  │                                                                      │   │
+│  │  System Prompt: 3-level conversation strategy                        │   │
+│  │  - Level 1 (Vague): Ask for details                                  │   │
+│  │  - Level 2 (Moderate): Soft follow-up question                       │   │
+│  │  - Level 3 (Complete): Extract as JSON                               │   │
+│  │                                                                      │   │
+│  │  Output: Clarifying question OR JSON with activities                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ├── Clarifying Question ──▶ Return to user (loop continues)          │
+│       │                                                                     │
+│       └── Activities Extracted                                              │
+│               │                                                             │
+│               ▼                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              LLM CALL 2: FOLLOW-UP ANALYZER                          │   │
+│  │                                                                      │   │
+│  │  Input: List of extracted activities                                 │   │
+│  │  Analysis Criteria:                                                  │   │
+│  │  - Project indicators (large initiatives, multi-phase work)          │   │
+│  │  - Activity-specific (experiments → check results, demos → feedback) │   │
+│  │  - Value-maximizing (documentation, dependencies, stakeholders)      │   │
+│  │                                                                      │   │
+│  │  Output: Proposed follow-ups with titles, summaries, suggested days  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ├── No Follow-ups ──▶ Return activities to user                      │
+│       │                                                                     │
+│       └── Follow-ups Proposed                                               │
+│               │                                                             │
+│               ▼                                                             │
+│       Store in pending_follow_ups[session_id]                               │
+│       Return message with proposals + "Would you like to save?"             │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  User Response (to follow-up question)                                      │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │              LLM CALL 3: CONFIRMATION DETECTOR                       │   │
+│  │                                                                      │   │
+│  │  Input: User message + list of pending proposals                     │   │
+│  │  Interpretation:                                                     │   │
+│  │  - "yes", "sure" → approve ALL                                       │   │
+│  │  - "no", "skip" → dismiss ALL                                        │   │
+│  │  - "save the first one" → selective approval                         │   │
+│  │  - Unrelated message → not a confirmation (continue conversation)    │   │
+│  │                                                                      │   │
+│  │  Output: is_confirmation, approved_indices, dismissed_indices        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│       │                                                                     │
+│       ├── Not Confirmation ──▶ Process as new message (restart flow)       │
+│       │                                                                     │
+│       └── Confirmation ──▶ Return approved/dismissed to Next.js for save   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Follow-Up Worthy Activities
+
+The analyzer identifies activities based on these criteria:
+
+| Activity Type | Follow-Up Suggestions |
+|---------------|----------------------|
+| `experiments` | Check results, document learnings, share findings |
+| `product_demos` | Gather feedback, track customer interest |
+| `mentoring` | Check mentee progress, schedule next session |
+| `presentations` | Collect audience feedback, share materials |
+| `research_learning` | Apply learnings to work, share knowledge |
+| `general_task` | Only if part of larger initiative |
+
+**Project Indicators** (High Priority):
+- Keywords: "2.0", "new version", "redesign", "migration", "roadmap"
+- Multi-phase or multi-week initiatives
+- Cross-team or strategic work
+
+#### State Management
+
+```python
+# In-memory storage (TODO: move to Redis)
+chat_sessions: Dict[str, List[dict]] = {}      # Chat history per session
+pending_follow_ups: Dict[str, dict] = {}       # Pending proposals per session
+
+# Pending follow-up structure
+{
+    "proposals": [
+        {
+            "activity_index": 0,
+            "activity_type": "experiments",
+            "title": "Check experiment results",
+            "summary": "Review A/B test outcomes",
+            "suggested_days": 7
+        }
+    ],
+    "activities": [...],           # Original extracted activities
+    "raw_summary": "...",          # Original summary
+    "awaiting_confirmation": True  # Flag for confirmation detection
+}
+```
+
+#### Response Schema Extensions
+
+When follow-ups are proposed:
+```json
+{
+  "session_id": "...",
+  "assistant_message": "Got it! I've extracted 2 activities...\n\nI noticed some activities that might benefit from follow-up:\n\n- **Check results** (in ~7 days): ...",
+  "needs_clarification": false,
+  "activities": [...],
+  "proposed_follow_ups": [
+    {
+      "activity_index": 0,
+      "activity_type": "experiments",
+      "title": "Check experiment results",
+      "summary": "Review outcomes and document learnings",
+      "suggested_days": 7
+    }
+  ],
+  "awaiting_followup_confirmation": true
+}
+```
+
+When user confirms:
+```json
+{
+  "followup_confirmation_result": {
+    "approved_indices": [0, 1],
+    "dismissed_indices": [],
+    "session_id": "..."
+  }
+}
 ```
 
 ### Activity Categories
