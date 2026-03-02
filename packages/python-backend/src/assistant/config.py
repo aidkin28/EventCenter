@@ -24,12 +24,6 @@ class Settings(BaseSettings):
 
     # Database Configuration
     database_url: str = ""
-    db_user: str = ""
-    db_key: str = ""
-    db_server: str = ""
-    db_port: str = "5432"
-    db_name: str = ""
-    db_ssl: str = "true"
 
     @staticmethod
     def _strip_sslmode(url: str) -> str:

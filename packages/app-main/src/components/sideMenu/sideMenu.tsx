@@ -12,6 +12,7 @@ import {
   ChevronRight,
   HelpCircle,
   LogOut,
+  MapPin,
   Settings,
   Home,
   Sparkles,
@@ -55,6 +56,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isFixed = true }) => {
     { href: "/dashboard", icon: <BarChart3 size={iconSize} />, label: "Dashboard" },
     { href: "/follow-ups", icon: <Bell size={iconSize} />, label: "Follow-ups" },
     { href: "/calendar", icon: <Calendar size={iconSize} />, label: "Calendar" },
+    { href: "/chat-zones", icon: <MapPin size={iconSize} />, label: "Chat Zones" },
     { href: "/stats", icon: <TrendingUp size={iconSize} />, label: "My Stats" },
     { href: "/update/history", icon: <History size={iconSize} />, label: "Update History" },
     ...(user?.activeTeamId

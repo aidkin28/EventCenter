@@ -79,7 +79,7 @@ export function LoginForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn("flex flex-col gap-6 w-full", className)} {...props}>
       <Card>
         <CardHeader>
           <CardTitle>Login to your account</CardTitle>
@@ -105,6 +105,7 @@ export function LoginForm({
                   type="email"
                   placeholder="m@example.com"
                   required
+                  className="focus-visible:border-red-500 focus-visible:ring-red-500/50"
                 />
               </div>
               <div className="grid gap-3">
@@ -123,10 +124,11 @@ export function LoginForm({
                   id="password"
                   type="password"
                   required
+                  className="focus-visible:border-red-500 focus-visible:ring-red-500/50"
                 />
               </div>
               <div className="flex flex-col gap-3">
-                <Button disabled={loading} type="submit" className="w-full">
+                <Button disabled={loading} type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white">
                   {loading ? (
                     <IconLoader className="animate-spin" stroke={2} />
                   ) : (

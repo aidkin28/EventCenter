@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, PoolConfig } from "pg";
 import { env } from "process";
 import * as schema from "./schema";
+import { getRequiredEnv } from "@/lib/environment";
 
 // Toggle between PgBouncer (port 6432) and direct PostgreSQL (port 5432)
 // Set USE_PGBOUNCER=true in .env to enable PgBouncer mode
@@ -18,8 +19,7 @@ const useSSL = env.DB_SSL !== "false";
 
 // Build PostgreSQL connection string
 const connectionString =
-  env.DATABASE_URL ||
-  `postgresql://${env.DB_USER}:${env.DB_KEY}@${env.DB_SERVER}:${env.DB_PORT || defaultPort}/${env.DB_NAME}`;
+  getRequiredEnv("DATABASE_URL");
 
 // Configure pool based on connection mode
 const poolConfig: PoolConfig = {

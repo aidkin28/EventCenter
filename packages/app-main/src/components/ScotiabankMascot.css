@@ -1,0 +1,159 @@
+/* ScotiabankMascot.css — Logo-to-character morph with hand-language gestures */
+
+/* ── Head (globe circle) ── rises up and shrinks to become the head */
+.scotia-head {
+  transform-origin: 106.5px 118.5px;
+  animation: scotiaHead 6s infinite alternate ease-in-out;
+}
+
+@keyframes scotiaHead {
+  0%, 20% {
+    transform: translateY(0) scale(1);
+  }
+  45%, 100% {
+    transform: translateY(-50px) scale(0.65);
+  }
+}
+
+/* ── Right arm (top wing) ──
+   Thick end ~(34, 107) becomes right shoulder.
+   Wing rotates + scales down so pointy tip swings into arm position,
+   then oscillates for expressive hand-language waving. */
+.scotia-right-arm {
+  transform-origin: 34px 107px;
+  animation: scotiaRightArm 6s infinite alternate ease-in-out;
+}
+
+@keyframes scotiaRightArm {
+  0%, 20% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  45% {
+    transform: translate(60px, 15px) rotate(-25deg) scale(0.6);
+  }
+  /* ── Gesture phase: waving / signing motion ── */
+  55% {
+    transform: translate(60px, 15px) rotate(-15deg) scale(0.6);
+  }
+  65% {
+    transform: translate(60px, 15px) rotate(-38deg) scale(0.6);
+  }
+  75% {
+    transform: translate(60px, 15px) rotate(-10deg) scale(0.6);
+  }
+  87% {
+    transform: translate(60px, 15px) rotate(-35deg) scale(0.6);
+  }
+  100% {
+    transform: translate(60px, 15px) rotate(-20deg) scale(0.6);
+  }
+}
+
+/* ── Left arm (bottom wing) ──
+   Thick end ~(179, 130) stays as left shoulder.
+   Wing rotates opposite direction, then gestures with offset timing. */
+.scotia-left-arm {
+  transform-origin: 179px 130px;
+  animation: scotiaLeftArm 6s infinite alternate ease-in-out;
+}
+
+@keyframes scotiaLeftArm {
+  0%, 20% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  45% {
+    transform: translate(-60px, -10px) rotate(20deg) scale(0.6);
+  }
+  /* ── Gesture phase: pointing / motioning ── */
+  58% {
+    transform: translate(-60px, -10px) rotate(35deg) scale(0.6);
+  }
+  68% {
+    transform: translate(-60px, -10px) rotate(12deg) scale(0.6);
+  }
+  80% {
+    transform: translate(-60px, -10px) rotate(40deg) scale(0.6);
+  }
+  92% {
+    transform: translate(-60px, -10px) rotate(18deg) scale(0.6);
+  }
+  100% {
+    transform: translate(-60px, -10px) rotate(30deg) scale(0.6);
+  }
+}
+
+/* ── Right hand ── fades in at wing tip, scales up, then wiggles expressively */
+.scotia-right-hand {
+  transform-origin: 0px 0px;
+  animation: scotiaRightHand 6s infinite alternate ease-in-out;
+}
+
+@keyframes scotiaRightHand {
+  0%, 25% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(2) rotate(0deg);
+  }
+  /* ── Hand-language gesture: wrist flick / wave ── */
+  55% {
+    opacity: 1;
+    transform: scale(2.2) rotate(30deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(2) rotate(-20deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(2.3) rotate(25deg);
+  }
+  87% {
+    opacity: 1;
+    transform: scale(2) rotate(-15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(2.2) rotate(20deg);
+  }
+}
+
+/* ── Left hand ── mirrors right hand with offset timing for natural asymmetry */
+.scotia-left-hand {
+  transform-origin: 0px 0px;
+  animation: scotiaLeftHand 6s infinite alternate ease-in-out;
+}
+
+@keyframes scotiaLeftHand {
+  0%, 25% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(2) rotate(0deg);
+  }
+  /* ── Hand-language gesture: point / beckon ── */
+  58% {
+    opacity: 1;
+    transform: scale(2.3) rotate(-35deg);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(2) rotate(20deg);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(2.4) rotate(-30deg);
+  }
+  92% {
+    opacity: 1;
+    transform: scale(2) rotate(15deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(2.2) rotate(-25deg);
+  }
+}
