@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError, commonErrors } from "@/lib/api-error";
+import { broadcastToGroup } from "@/lib/pubsub";
 
 const updateNodeSchema = z.object({
   label: z.string().min(1).max(200).optional(),
@@ -53,6 +54,8 @@ export async function PATCH(
       .set(validated)
       .where(eq(networkingMindMapNodes.id, nodeId))
       .returning();
+
+    await broadcastToGroup(groupId, { type: "mindmap:node:update", data: updated });
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -104,6 +107,8 @@ export async function DELETE(
     await db
       .delete(networkingMindMapNodes)
       .where(eq(networkingMindMapNodes.id, nodeId));
+
+    await broadcastToGroup(groupId, { type: "mindmap:node:delete", data: { id: nodeId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

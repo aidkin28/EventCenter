@@ -9,6 +9,7 @@ import {
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError, commonErrors } from "@/lib/api-error";
 import { createId } from "@/lib/utils";
+import { broadcastToGroup } from "@/lib/pubsub";
 
 const createNodeSchema = z.object({
   parentId: z.string().max(255).nullable().optional(),
@@ -110,6 +111,8 @@ export async function POST(
         createdByUserId: user.id,
       })
       .returning();
+
+    await broadcastToGroup(groupId, { type: "mindmap:node:add", data: node });
 
     return NextResponse.json(node, { status: 201 });
   } catch (error) {

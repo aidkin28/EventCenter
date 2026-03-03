@@ -8,6 +8,7 @@ import {
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError, commonErrors } from "@/lib/api-error";
 import { createId } from "@/lib/utils";
+import { broadcastToGroup } from "@/lib/pubsub";
 
 /**
  * POST /api/networking/groups/[groupId]/members - Join group
@@ -50,6 +51,11 @@ export async function POST(
       .set({ memberCount: sql`${networkingGroups.memberCount} + 1` })
       .where(eq(networkingGroups.id, groupId));
 
+    await broadcastToGroup(groupId, {
+      type: "member:join",
+      data: { userId: user.id, memberCount: group.memberCount + 1 },
+    });
+
     return NextResponse.json({ success: true, memberCount: group.memberCount + 1 }, { status: 201 });
   } catch (error) {
     return handleApiError(error, "networking/groups/[groupId]/members:POST");
@@ -88,6 +94,11 @@ export async function DELETE(
       .update(networkingGroups)
       .set({ memberCount: sql`GREATEST(${networkingGroups.memberCount} - 1, 0)` })
       .where(eq(networkingGroups.id, groupId));
+
+    await broadcastToGroup(groupId, {
+      type: "member:leave",
+      data: { userId: user.id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
-import { useNetworkingStore } from "@/lib/stores/networkingStore";
+import { useEffect, useRef, useCallback } from "react";
+import { WebPubSubClient } from "@azure/web-pubsub-client";
+import {
+  useNetworkingStore,
+  type NetworkingMessage,
+  type MindMapNode,
+} from "@/lib/stores/networkingStore";
 
 const GROUPS_POLL_MS = 30_000;
 const MESSAGES_POLL_MS = 3_000;
@@ -15,11 +20,18 @@ export function useNetworkingPolling() {
   const setMessagesLoading = useNetworkingStore((s) => s.setMessagesLoading);
   const setMindMapNodes = useNetworkingStore((s) => s.setMindMapNodes);
   const setMindMapLoading = useNetworkingStore((s) => s.setMindMapLoading);
+  const addMindMapNode = useNetworkingStore((s) => s.addMindMapNode);
+  const updateMindMapNode = useNetworkingStore((s) => s.updateMindMapNode);
+  const removeMindMapNode = useNetworkingStore((s) => s.removeMindMapNode);
+  const updateGroupMemberCount = useNetworkingStore((s) => s.updateGroupMemberCount);
+  const updateGroupTopWords = useNetworkingStore((s) => s.updateGroupTopWords);
+  const setWsConnected = useNetworkingStore((s) => s.setWsConnected);
 
+  const wsClientRef = useRef<WebPubSubClient | null>(null);
   const latestTimestampRef = useRef<string | null>(null);
   const initialLoadDoneRef = useRef(false);
 
-  // Poll groups list
+  // Poll groups list (unchanged — keep 30s polling)
   useEffect(() => {
     let active = true;
 
@@ -52,25 +64,80 @@ export function useNetworkingPolling() {
     initialLoadDoneRef.current = false;
   }, [selectedGroupId]);
 
-  // Poll messages for active group
+  // Handle incoming PubSub event
+  const handlePubSubEvent = useCallback(
+    (event: { data: Record<string, unknown> }) => {
+      const { type, data } = event.data as {
+        type: string;
+        data: Record<string, unknown>;
+        group: string;
+      };
+
+      switch (type) {
+        case "message:new": {
+          const msg = data as unknown as NetworkingMessage & { topWords?: string[] };
+          appendMessages([msg]);
+          if (msg.topWords && msg.groupId) {
+            updateGroupTopWords(msg.groupId, msg.topWords);
+          }
+          break;
+        }
+        case "mindmap:node:add":
+          addMindMapNode(data as unknown as MindMapNode);
+          break;
+        case "mindmap:node:update": {
+          const node = data as unknown as MindMapNode;
+          updateMindMapNode(node.id, node);
+          break;
+        }
+        case "mindmap:node:delete":
+          removeMindMapNode((data as unknown as { id: string }).id);
+          break;
+        case "member:join": {
+          const join = data as unknown as { userId: string; memberCount: number };
+          if (join.memberCount != null && selectedGroupId) {
+            updateGroupMemberCount(selectedGroupId, join.memberCount);
+          }
+          break;
+        }
+        case "member:leave":
+          // Re-fetch groups to get updated count
+          fetch("/api/networking/groups")
+            .then((r) => r.json())
+            .then(setGroups)
+            .catch(() => {});
+          break;
+      }
+    },
+    [
+      appendMessages,
+      addMindMapNode,
+      updateMindMapNode,
+      removeMindMapNode,
+      updateGroupMemberCount,
+      updateGroupTopWords,
+      setGroups,
+      selectedGroupId,
+    ]
+  );
+
+  // WebSocket + initial REST load for messages and mindmap
   useEffect(() => {
     if (!selectedGroupId || !isMember) return;
     let active = true;
+    let wsClient: WebPubSubClient | null = null;
+    let msgPollInterval: ReturnType<typeof setInterval> | null = null;
+    let mindmapPollInterval: ReturnType<typeof setInterval> | null = null;
 
     async function fetchMessages() {
       try {
-        if (!initialLoadDoneRef.current) {
-          setMessagesLoading(true);
-        }
-
+        if (!initialLoadDoneRef.current) setMessagesLoading(true);
         const afterParam = latestTimestampRef.current
           ? `?after=${encodeURIComponent(latestTimestampRef.current)}`
           : "";
-
         const res = await fetch(
           `/api/networking/groups/${selectedGroupId}/messages${afterParam}`
         );
-
         if (res.ok && active) {
           const data = await res.json();
           if (data.length > 0) {
@@ -80,11 +147,8 @@ export function useNetworkingPolling() {
             } else {
               appendMessages(data);
             }
-            // Update latest timestamp from last message
             const last = data[data.length - 1];
-            if (last?.createdAt) {
-              latestTimestampRef.current = last.createdAt;
-            }
+            if (last?.createdAt) latestTimestampRef.current = last.createdAt;
           } else if (!initialLoadDoneRef.current) {
             setMessages([]);
             initialLoadDoneRef.current = true;
@@ -96,19 +160,6 @@ export function useNetworkingPolling() {
         if (active) setMessagesLoading(false);
       }
     }
-
-    fetchMessages();
-    const interval = setInterval(fetchMessages, MESSAGES_POLL_MS);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [selectedGroupId, isMember, setMessages, appendMessages, setMessagesLoading]);
-
-  // Poll mind map nodes for active group
-  useEffect(() => {
-    if (!selectedGroupId || !isMember) return;
-    let active = true;
 
     async function fetchMindMap() {
       try {
@@ -127,11 +178,87 @@ export function useNetworkingPolling() {
       }
     }
 
-    fetchMindMap();
-    const interval = setInterval(fetchMindMap, MINDMAP_POLL_MS);
+    async function connectWebSocket() {
+      try {
+        const res = await fetch("/api/networking/pubsub/negotiate");
+        if (!res.ok) return false;
+        const { url } = await res.json();
+        if (!url || !active) return false;
+
+        wsClient = new WebPubSubClient(url);
+        wsClientRef.current = wsClient;
+
+        wsClient.on("server-message", (e) => {
+          handlePubSubEvent({ data: e.message.data as Record<string, unknown> });
+        });
+
+        wsClient.on("group-message", (e) => {
+          handlePubSubEvent({ data: e.message.data as Record<string, unknown> });
+        });
+
+        wsClient.on("disconnected", () => {
+          if (active) setWsConnected(false);
+        });
+
+        wsClient.on("connected", () => {
+          if (active) setWsConnected(true);
+        });
+
+        await wsClient.start();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function startPollingFallback() {
+      msgPollInterval = setInterval(fetchMessages, MESSAGES_POLL_MS);
+      mindmapPollInterval = setInterval(fetchMindMap, MINDMAP_POLL_MS);
+    }
+
+    // Initial REST loads + WebSocket setup
+    async function init() {
+      // Do initial REST loads
+      await Promise.all([fetchMessages(), fetchMindMap()]);
+      if (!active) return;
+
+      // Try WebSocket connection
+      const connected = await connectWebSocket();
+      if (!active) return;
+
+      if (!connected) {
+        // Fall back to polling if WebSocket negotiation fails
+        startPollingFallback();
+      }
+    }
+
+    init();
+
     return () => {
       active = false;
-      clearInterval(interval);
+      if (msgPollInterval) clearInterval(msgPollInterval);
+      if (mindmapPollInterval) clearInterval(mindmapPollInterval);
+      if (wsClient) {
+        wsClient.stop();
+        wsClientRef.current = null;
+      }
+      setWsConnected(false);
     };
-  }, [selectedGroupId, isMember, setMindMapNodes, setMindMapLoading]);
+  }, [
+    selectedGroupId,
+    isMember,
+    setMessages,
+    appendMessages,
+    setMessagesLoading,
+    setMindMapNodes,
+    setMindMapLoading,
+    addMindMapNode,
+    updateMindMapNode,
+    removeMindMapNode,
+    updateGroupMemberCount,
+    updateGroupTopWords,
+    setWsConnected,
+    setGroups,
+    handlePubSubEvent,
+  ]);
 }

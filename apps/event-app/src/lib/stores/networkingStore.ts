@@ -40,6 +40,9 @@ interface NetworkingState {
   mindMapNodes: MindMapNode[];
   isMember: boolean;
 
+  // Connection state
+  wsConnected: boolean;
+
   // Loading states
   groupsLoading: boolean;
   messagesLoading: boolean;
@@ -55,6 +58,7 @@ interface NetworkingState {
   addMindMapNode: (node: MindMapNode) => void;
   removeMindMapNode: (nodeId: string) => void;
   setIsMember: (isMember: boolean) => void;
+  setWsConnected: (connected: boolean) => void;
   setGroupsLoading: (loading: boolean) => void;
   setMessagesLoading: (loading: boolean) => void;
   setMindMapLoading: (loading: boolean) => void;
@@ -70,6 +74,7 @@ export const useNetworkingStore = create<NetworkingState>((set) => ({
   messages: [],
   mindMapNodes: [],
   isMember: false,
+  wsConnected: false,
   groupsLoading: false,
   messagesLoading: false,
   mindMapLoading: false,
@@ -107,6 +112,7 @@ export const useNetworkingStore = create<NetworkingState>((set) => ({
     })),
 
   setIsMember: (isMember) => set({ isMember }),
+  setWsConnected: (connected) => set({ wsConnected: connected }),
   setGroupsLoading: (loading) => set({ groupsLoading: loading }),
   setMessagesLoading: (loading) => set({ messagesLoading: loading }),
   setMindMapLoading: (loading) => set({ mindMapLoading: loading }),

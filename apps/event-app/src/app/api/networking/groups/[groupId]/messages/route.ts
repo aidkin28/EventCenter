@@ -11,6 +11,7 @@ import {
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError, commonErrors } from "@/lib/api-error";
 import { createId } from "@/lib/utils";
+import { broadcastToGroup } from "@/lib/pubsub";
 
 const sendMessageSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -154,6 +155,11 @@ export async function POST(
       .update(networkingGroups)
       .set({ topWords })
       .where(eq(networkingGroups.id, groupId));
+
+    await broadcastToGroup(groupId, {
+      type: "message:new",
+      data: { ...message, userName: user.name, topWords },
+    });
 
     return NextResponse.json(
       { ...message, userName: user.name, topWords },
