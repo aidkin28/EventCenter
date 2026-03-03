@@ -89,7 +89,7 @@ function processThreads(raw: ThreadDef[], isSmall: boolean): ThreadDef[] {
       pts[yi] = CENTER_Y + (pts[yi] - CENTER_Y) * 0.75;
     }
 
-    return { ...t, pts, dd: t.dd * 1.25 };
+    return { ...t, pts, dd: t.dd * 2.5 };
   });
 }
 
