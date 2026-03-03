@@ -12,11 +12,11 @@ import * as path from "path";
 
 const PYTHON_SCHEMAS_DIR = path.join(
   __dirname,
-  "../packages/python-backend/src/assistant/schemas"
+  "../apps/python-backend/src/assistant/schemas"
 );
 const OUTPUT_FILE = path.join(
   __dirname,
-  "../packages/app-main/src/types/generated/python-backend.ts"
+  "../apps/event-app/src/types/generated/python-backend.ts"
 );
 
 interface FieldInfo {
