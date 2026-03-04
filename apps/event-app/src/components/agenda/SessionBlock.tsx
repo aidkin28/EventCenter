@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@common/lib/utils";
 import type { Session, Speaker } from "@/data/types";
 import { MapPin, Clock } from "lucide-react";
@@ -8,7 +9,7 @@ import { formatTimeRange } from "@/lib/time";
 interface SessionBlockProps {
   session: Session;
   speaker: Speaker | undefined;
-  onClick: (session: Session) => void;
+  from?: string;
 }
 
 const TRACK_COLORS: Record<string, string> = {
@@ -19,16 +20,20 @@ const TRACK_COLORS: Record<string, string> = {
   Culture: "border-l-violet-500",
 };
 
-export function SessionBlock({ session, speaker, onClick }: SessionBlockProps) {
+export function SessionBlock({ session, speaker, from }: SessionBlockProps) {
   const trackColor = session.track
     ? TRACK_COLORS[session.track] ?? "border-l-gray-300"
     : "border-l-gray-300";
 
+  const href = from
+    ? `/sessions/${session.id}?from=${from}`
+    : `/sessions/${session.id}`;
+
   return (
-    <button
-      onClick={() => onClick(session)}
+    <Link
+      href={href}
       className={cn(
-        "group w-full rounded-lg border border-border bg-white p-3 text-left shadow-2xs transition-all duration-150 hover:shadow-sm",
+        "group block w-full rounded-lg border border-border bg-white p-3 text-left shadow-2xs transition-all duration-150 hover:shadow-sm",
         "border-l-[3px]",
         trackColor
       )}
@@ -48,6 +53,6 @@ export function SessionBlock({ session, speaker, onClick }: SessionBlockProps) {
       {speaker && (
         <p className="mt-1 text-xs text-muted-foreground">{speaker.name}</p>
       )}
-    </button>
+    </Link>
   );
 }

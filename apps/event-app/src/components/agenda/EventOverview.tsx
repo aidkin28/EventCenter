@@ -1,9 +1,11 @@
 import { EVENT_INFO } from "@/data/event";
-import { SPEAKERS } from "@/data/speakers";
+import type { Speaker } from "@/data/types";
 
-export function EventOverview() {
-  const featuredSpeakers = SPEAKERS.slice(0, 4);
+interface EventOverviewProps {
+  speakers: Speaker[];
+}
 
+export function EventOverview({ speakers }: EventOverviewProps) {
   return (
     <section className="mb-10 rounded-2xl border border-border bg-gradient-to-br from-primary/[0.03] to-transparent p-8">
       <div className="mb-6">
@@ -27,7 +29,7 @@ export function EventOverview() {
           Featured Speakers
         </p>
         <div className="flex items-center gap-3">
-          {featuredSpeakers.map((speaker) => (
+          {speakers.map((speaker) => (
             <div key={speaker.id} className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                 {speaker.initials}

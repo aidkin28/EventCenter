@@ -23,7 +23,6 @@ const NAV_ITEMS = [
   { href: "/speakers", label: "Speakers", icon: Mic2 },
   { href: "/sessions", label: "Sessions", icon: LayoutList },
   { href: "/attendees", label: "Attendees", icon: Users },
-  { href: "/my-calendar", label: "My Calendar", icon: CalendarCheck },
   { href: "/networking", label: "Networking", icon: Network },
 ];
 
@@ -70,7 +69,7 @@ export function Sidebar() {
         <div className="flex h-16 items-center px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Image src="/scotia_logo.png" alt="Event Logo" width={32} height={32} />
+              <Image src="/scotia_logo.png" alt="Event Logo" width={32} height={32} unoptimized />
             </div>
             <div>
               <h1 className="text-sm font-semibold tracking-tight text-foreground">
@@ -117,7 +116,7 @@ export function Sidebar() {
         {/* Footer */}
         <div className="border-t border-border px-6 py-4">
           <p className="text-[11px] text-muted-foreground">
-            The Ritz-Carlton, Toronto
+            TBD
           </p>
           <p className="text-[11px] text-muted-foreground">
             April 15–17, 2026
