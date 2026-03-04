@@ -44,10 +44,10 @@ export function NetworkingLayout() {
       </div>
 
       {/* Inline preview panel — sits beside, no overlay */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {showPanel && (
           <motion.div
-            key={previewGroupId}
+            key="preview-panel"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 480, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
