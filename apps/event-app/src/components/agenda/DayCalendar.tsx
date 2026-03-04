@@ -7,7 +7,6 @@ import { SessionBlock } from "./SessionBlock";
 interface DayCalendarProps {
   sessions: Session[];
   speakers: Speaker[];
-  onSessionClick: (session: Session) => void;
 }
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 7); // 7am to 7pm
@@ -20,7 +19,6 @@ function timeToMinutes(time: string): number {
 export function DayCalendar({
   sessions,
   speakers,
-  onSessionClick,
 }: DayCalendarProps) {
   const speakerMap = useMemo(
     () => new Map(speakers.map((s) => [s.id, s])),
@@ -75,7 +73,7 @@ export function DayCalendar({
               <SessionBlock
                 session={session}
                 speaker={speakerMap.get(session.speakerId)}
-                onClick={onSessionClick}
+                from="agenda"
               />
             </div>
           );

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Badge } from "@common/components/ui/badge";
 import { cn } from "@common/lib/utils";
 import { Clock, MapPin, User } from "lucide-react";
@@ -26,7 +27,10 @@ export function SessionCard({ session, speaker }: SessionCardProps) {
     : "";
 
   return (
-    <div className="rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-sm">
+    <Link
+      href={`/sessions/${session.id}`}
+      className="block rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-sm"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           {/* Tags */}
@@ -73,10 +77,13 @@ export function SessionCard({ session, speaker }: SessionCardProps) {
         </div>
 
         {/* Upvote */}
-        <div className="flex-shrink-0 pt-1">
+        <div
+          className="flex-shrink-0 pt-1"
+          onClick={(e) => e.preventDefault()}
+        >
           <UpvoteButton sessionId={session.id} />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
