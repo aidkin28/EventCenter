@@ -1,21 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@common/components/ui/Tabs";
 import { cn } from "@common/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PersonalCalendar } from "@/components/my-calendar/PersonalCalendar";
 import { SessionPool } from "@/components/my-calendar/SessionPool";
-import { EVENT_INFO } from "@/data/event";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventSessions } from "@/hooks/useEventData";
 
 export default function MyCalendarPage() {
-  const [activeDay, setActiveDay] = useState<1 | 2 | 3>(1);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: sessions, isLoading } = useEventSessions(currentEvent?.id);
+
+  const days = useMemo(() => {
+    const dateSet = new Set(sessions.map((s) => s.date));
+    return Array.from(dateSet).sort();
+  }, [sessions]);
 
   const formatDayLabel = (dateStr: string, dayNum: number) => {
     const date = new Date(dateStr + "T12:00:00");
     return `Day ${dayNum} · ${format(date, "EEEE, MMM d")}`;
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <PageHeader title="My Calendar" subtitle="Loading..." />
+        <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+          Loading sessions...
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -25,36 +45,32 @@ export default function MyCalendarPage() {
       />
 
       <Tabs
-        defaultValue="day-1"
-        onValueChange={(v) => setActiveDay(Number(v.split("-")[1]) as 1 | 2 | 3)}
+        defaultValue="day-0"
+        onValueChange={(v) => setActiveDayIndex(Number(v.replace("day-", "")))}
       >
         <TabsList className="mb-6 flex gap-2 bg-transparent p-0">
-          {([
-            { value: "day-1", date: EVENT_INFO.dates.day1, num: 1 },
-            { value: "day-2", date: EVENT_INFO.dates.day2, num: 2 },
-            { value: "day-3", date: EVENT_INFO.dates.day3, num: 3 },
-          ] as const).map((day) => (
+          {days.map((date, i) => (
             <div
-              key={day.value}
+              key={date}
               className={cn(
                 "rounded-xl px-1 py-1 transition-colors",
-                activeDay === day.num
+                activeDayIndex === i
                   ? "bg-primary/15"
                   : "bg-primary/[0.06]"
               )}
             >
-              <TabsTrigger value={day.value}>
-                {formatDayLabel(day.date, day.num)}
+              <TabsTrigger value={`day-${i}`}>
+                {formatDayLabel(date, i + 1)}
               </TabsTrigger>
             </div>
           ))}
         </TabsList>
 
-        {([1, 2, 3] as const).map((day) => (
-          <TabsContent key={day} value={`day-${day}`}>
+        {days.map((date, i) => (
+          <TabsContent key={date} value={`day-${i}`}>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-              <SessionPool dayFilter={day} />
-              <PersonalCalendar day={day} />
+              <SessionPool sessions={sessions} dateFilter={date} />
+              <PersonalCalendar sessions={sessions} dateFilter={date} />
             </div>
           </TabsContent>
         ))}

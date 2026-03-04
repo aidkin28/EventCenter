@@ -4,16 +4,19 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AttendeeGrid } from "@/components/attendees/AttendeeGrid";
-import { ATTENDEES } from "@/data/attendees";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventAttendees } from "@/hooks/useEventData";
 
 export default function AttendeesPage() {
   const [search, setSearch] = useState("");
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: attendees } = useEventAttendees(currentEvent?.id);
 
   return (
     <>
       <PageHeader
         title="Attendees"
-        subtitle={`${ATTENDEES.length} executives attending the offsite`}
+        subtitle={`${attendees.length} executives attending the offsite`}
         action={
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -19,7 +19,7 @@ export function NetworkingGroupCard({
     <button
       onClick={onSelect}
       className={cn(
-        "w-[220px] rounded-xl border border-border bg-white p-4 text-left transition-all duration-150",
+        "flex w-[220px] flex-col rounded-xl border border-border bg-white p-4 text-left transition-all duration-150",
         isSelected
           ? "border-primary/30 bg-primary/[0.03] shadow-sm"
           : "hover:border-border/60 hover:shadow-sm"
@@ -50,7 +50,7 @@ export function NetworkingGroupCard({
       )}
 
       {/* Footer: member count + creator */}
-      <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between pt-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <Users className="h-3 w-3" />
           {group.memberCount}

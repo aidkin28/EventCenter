@@ -4,9 +4,8 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@common/components/ui/Tabs";
 import { cn } from "@common/lib/utils";
-import { SESSIONS } from "@/data/sessions";
-import { SPEAKERS } from "@/data/speakers";
-import { EVENT_INFO } from "@/data/event";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventSessions } from "@/hooks/useEventData";
 import { useSessionStore } from "@/lib/stores/sessionStore";
 import { SessionCard } from "./SessionCard";
 
@@ -53,62 +52,72 @@ function ScrollReveal({ children, delay }: { children: React.ReactNode; delay: n
 }
 
 export function SessionList() {
-  const [activeDay, setActiveDay] = useState<string>("day-1");
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
 
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: sessions, isLoading } = useEventSessions(currentEvent?.id);
   const userSessions = useSessionStore((s) => s.userSessions);
   const upvotes = useSessionStore((s) => s.upvotes);
 
-  const speakerMap = useMemo(
-    () => new Map(SPEAKERS.map((s) => [s.id, s])),
-    []
-  );
+  // Derive unique sorted dates
+  const days = useMemo(() => {
+    const allSessions = [...sessions, ...userSessions];
+    const dateSet = new Set(allSessions.map((s) => s.date));
+    return Array.from(dateSet).sort();
+  }, [sessions, userSessions]);
 
-  const sessionsByDay = useMemo(() => {
-    const combined = [...SESSIONS, ...userSessions];
-    const grouped: Record<number, typeof combined> = { 1: [], 2: [], 3: [] };
+  const sessionsByDate = useMemo(() => {
+    const combined = [...sessions, ...userSessions];
+    const grouped: Record<string, typeof combined> = {};
     for (const session of combined) {
-      (grouped[session.day] ??= []).push(session);
+      (grouped[session.date] ??= []).push(session);
     }
-    for (const day of [1, 2, 3]) {
-      grouped[day].sort((a, b) => (upvotes[b.id] ?? 0) - (upvotes[a.id] ?? 0));
+    // Sort by upvotes within each date
+    for (const date of Object.keys(grouped)) {
+      grouped[date].sort((a, b) => (upvotes[b.id] ?? 0) - (upvotes[a.id] ?? 0));
     }
     return grouped;
-  }, [userSessions, upvotes]);
+  }, [sessions, userSessions, upvotes]);
 
-  const days = [
-    { value: "day-1", date: EVENT_INFO.dates.day1, num: 1 },
-    { value: "day-2", date: EVENT_INFO.dates.day2, num: 2 },
-    { value: "day-3", date: EVENT_INFO.dates.day3, num: 3 },
-  ] as const;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+        Loading sessions...
+      </div>
+    );
+  }
 
   return (
-    <Tabs defaultValue="day-1" onValueChange={setActiveDay}>
+    <Tabs
+      defaultValue="day-0"
+      onValueChange={(v) => setActiveDayIndex(Number(v.replace("day-", "")))}
+    >
       <TabsList className="mb-6 flex items-start gap-2 bg-transparent p-0">
-        {days.map((day) => (
+        {days.map((date, i) => (
           <div
-            key={day.value}
+            key={date}
             className={cn(
               "rounded-xl px-1 py-1 transition-colors",
-              activeDay === day.value
+              activeDayIndex === i
                 ? "bg-primary/15"
                 : "bg-primary/[0.06]"
             )}
           >
-            <TabsTrigger value={day.value}>
-              {formatDayLabel(day.date, day.num)}
+            <TabsTrigger value={`day-${i}`}>
+              {formatDayLabel(date, i + 1)}
             </TabsTrigger>
           </div>
         ))}
       </TabsList>
 
-      {([1, 2, 3] as const).map((day) => (
-        <TabsContent key={day} value={`day-${day}`} variant="blank">
+      {days.map((date, i) => (
+        <TabsContent key={date} value={`day-${i}`} variant="blank">
           <div className="space-y-3">
-            {sessionsByDay[day].map((session, i) => (
-              <ScrollReveal key={session.id} delay={i * 80}>
+            {(sessionsByDate[date] ?? []).map((session, idx) => (
+              <ScrollReveal key={session.id} delay={idx * 80}>
                 <SessionCard
                   session={session}
-                  speaker={speakerMap.get(session.speakerId)}
+                  speakers={session.speakers}
                 />
               </ScrollReveal>
             ))}

@@ -10,7 +10,7 @@ import { UpvoteButton } from "./UpvoteButton";
 
 interface SessionCardProps {
   session: Session;
-  speaker: Speaker | undefined;
+  speakers: Speaker[];
 }
 
 const TRACK_BADGE_COLORS: Record<string, string> = {
@@ -21,7 +21,7 @@ const TRACK_BADGE_COLORS: Record<string, string> = {
   Culture: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
-export function SessionCard({ session, speaker }: SessionCardProps) {
+export function SessionCard({ session, speakers }: SessionCardProps) {
   const trackColors = session.track
     ? TRACK_BADGE_COLORS[session.track] ?? "bg-gray-50 text-gray-700 border-gray-200"
     : "";
@@ -62,10 +62,10 @@ export function SessionCard({ session, speaker }: SessionCardProps) {
               <MapPin className="h-3.5 w-3.5" />
               {session.location}
             </span>
-            {speaker && (
+            {speakers.length > 0 && (
               <span className="flex items-center gap-1">
                 <User className="h-3.5 w-3.5" />
-                {speaker.name}
+                {speakers.map((s) => s.name).join(", ")}
               </span>
             )}
           </div>

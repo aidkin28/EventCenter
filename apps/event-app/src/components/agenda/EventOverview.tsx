@@ -1,28 +1,29 @@
-import { EVENT_INFO } from "@/data/event";
 import type { Speaker } from "@/data/types";
+import type { EventData } from "@/lib/stores/eventStore";
 
 interface EventOverviewProps {
+  event: EventData | null;
   speakers: Speaker[];
 }
 
-export function EventOverview({ speakers }: EventOverviewProps) {
+export function EventOverview({ event, speakers }: EventOverviewProps) {
+  if (!event) return null;
+
   return (
     <section className="mb-10 rounded-2xl border border-border bg-gradient-to-br from-primary/[0.03] to-transparent p-8">
       <div className="mb-6">
         <p className="mb-2 text-xs font-medium uppercase tracking-widest text-primary">
-          {EVENT_INFO.venue} &middot; {EVENT_INFO.location}
+          {event.venue} &middot; {event.location}
         </p>
         <h2 className="text-3xl font-bold tracking-tight text-foreground">
-          {EVENT_INFO.name}
+          {event.title}
         </h2>
-        <p className="mt-1 text-lg font-medium text-muted-foreground">
-          {EVENT_INFO.tagline}
-        </p>
+        {event.description && (
+          <p className="mt-1 text-lg font-medium text-muted-foreground">
+            {event.description}
+          </p>
+        )}
       </div>
-
-      <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        {EVENT_INFO.purpose}
-      </p>
 
       <div>
         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">

@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     # Azure OpenAI Configuration
     azure_openai_api_key: str = ""
     azure_openai_endpoint: str = ""
-    azure_openai_deployment: str = "gpt-4o"
+    azure_openai_deployment: str = "gpt-41"
+    azure_openai_deployment_mini: str = "gpt-41-mini"
     azure_openai_api_version: str = "2024-08-01-preview"
 
     # Server Configuration

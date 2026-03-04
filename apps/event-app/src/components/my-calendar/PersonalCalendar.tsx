@@ -3,28 +3,26 @@
 import { useMemo } from "react";
 import { useCalendarStore } from "@/lib/stores/calendarStore";
 import { CalendarDayColumn } from "./CalendarDayColumn";
-import { SESSIONS } from "@/data/sessions";
-import { SPEAKERS } from "@/data/speakers";
+import type { Session } from "@/data/types";
 
 interface PersonalCalendarProps {
-  day: 1 | 2 | 3;
+  sessions: Session[];
+  dateFilter: string;
 }
 
-export function PersonalCalendar({ day }: PersonalCalendarProps) {
+export function PersonalCalendar({ sessions, dateFilter }: PersonalCalendarProps) {
   const selectedIds = useCalendarStore((s) => s.selectedSessionIds);
   const removeSession = useCalendarStore((s) => s.removeSession);
 
   const selectedSessions = useMemo(
     () =>
-      SESSIONS.filter((s) => s.day === day && selectedIds.includes(s.id)),
-    [day, selectedIds]
+      sessions.filter((s) => s.date === dateFilter && selectedIds.includes(s.id)),
+    [sessions, dateFilter, selectedIds]
   );
 
   return (
     <CalendarDayColumn
-      day={day}
       sessions={selectedSessions}
-      speakers={SPEAKERS}
       onRemoveSession={removeSession}
     />
   );

@@ -1,6 +1,5 @@
-import type { Attendee } from "./types";
-
-export const ATTENDEES: Attendee[] = [
+// Legacy mock data - no longer used by consumer pages (DB-driven now)
+export const ATTENDEES = [
   { id: "a-01", name: "Victoria Chen", title: "Chief Executive Officer", company: "Scotiabank", imageUrl: "", initials: "VC" },
   { id: "a-02", name: "Marcus Thompson", title: "Chief Technology Officer", company: "Scotiabank", imageUrl: "", initials: "MT" },
   { id: "a-03", name: "Sarah Nakamura", title: "SVP, People & Culture", company: "Scotiabank", imageUrl: "", initials: "SN" },

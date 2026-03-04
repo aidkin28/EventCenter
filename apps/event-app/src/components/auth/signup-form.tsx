@@ -27,12 +27,13 @@ export function SignupForm({
   const router = useRouter();
 
   const [fullname, setFullname] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [isVerified, setIsVerified] = useState(false);
 
@@ -74,6 +75,7 @@ export function SignupForm({
   async function handleSubmit(e: any) {
     e.preventDefault();
 
+    const email = username + "@scotiabank.com";
     const { data, error } = await authClient.signUp.email(
       {
         email,
@@ -87,6 +89,7 @@ export function SignupForm({
         onSuccess: (ctx) => {
           setLoading(false);
           setIsSent(true);
+          setSentEmail(email);
           setUserId(ctx.data.user.id);
         },
         onError: (ctx) => {
@@ -120,7 +123,7 @@ export function SignupForm({
             <CardDescription>
               {isVerified
                 ? "Your email has been successfully verified."
-                : <>We've sent a verification link to <span className="font-semibold text-foreground">{email}</span>.</>
+                : <>We've sent a verification link to <span className="font-semibold text-foreground">{sentEmail}</span>.</>
               }
             </CardDescription>
           </CardHeader>
@@ -172,15 +175,21 @@ export function SignupForm({
                 />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  onChange={(e) => setEmail(e.target.value)}
-                  value={email}
-                  id="email"
-                  type="email"
-                  placeholder="me@example.com"
-                  required
-                />
+                <Label htmlFor="username">Email</Label>
+                <div className="flex items-center rounded-md border border-input bg-background focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/50">
+                  <input
+                    onChange={(e) => setUsername(e.target.value)}
+                    value={username}
+                    id="username"
+                    type="text"
+                    placeholder="john.doe"
+                    required
+                    className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                  <span className="select-none border-l border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    @scotiabank.com
+                  </span>
+                </div>
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">

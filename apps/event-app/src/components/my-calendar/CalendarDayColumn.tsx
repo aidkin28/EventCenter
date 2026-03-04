@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import { X } from "lucide-react";
-import type { Session, Speaker } from "@/data/types";
+import type { Session } from "@/data/types";
 import { formatTimeRange } from "@/lib/time";
 
 interface CalendarDayColumnProps {
-  day: 1 | 2 | 3;
   sessions: Session[];
-  speakers: Speaker[];
   onRemoveSession: (sessionId: string) => void;
 }
 
@@ -20,16 +17,9 @@ function timeToMinutes(time: string): number {
 }
 
 export function CalendarDayColumn({
-  day,
   sessions,
-  speakers,
   onRemoveSession,
 }: CalendarDayColumnProps) {
-  const speakerMap = useMemo(
-    () => new Map(speakers.map((s) => [s.id, s])),
-    [speakers]
-  );
-
   const startMinutes = 7 * 60; // 7:00 AM
   const totalMinutes = 12 * 60; // 12 hours (7am-7pm)
 
@@ -64,7 +54,9 @@ export function CalendarDayColumn({
           const sessionStart = timeToMinutes(session.startTime) - startMinutes;
           const sessionDuration =
             timeToMinutes(session.endTime) - timeToMinutes(session.startTime);
-          const speaker = speakerMap.get(session.speakerId);
+          const speakerName = session.speakers.length > 0
+            ? session.speakers.map((s) => s.name).join(", ")
+            : null;
 
           return (
             <div
@@ -82,7 +74,7 @@ export function CalendarDayColumn({
                   </p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {formatTimeRange(session.startTime, session.endTime)}
-                    {speaker && ` · ${speaker.name}`}
+                    {speakerName && ` · ${speakerName}`}
                   </p>
                 </div>
                 <button

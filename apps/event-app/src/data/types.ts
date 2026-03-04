@@ -2,44 +2,41 @@ export interface Speaker {
   id: string;
   name: string;
   title: string;
-  company: string;
+  company: string | null;
   bio: string;
-  imageUrl: string;
+  imageUrl: string | null;
   initials: string;
 }
 
 export interface Session {
   id: string;
   title: string;
-  description: string;
-  speakerId: string;
-  day: 1 | 2 | 3;
+  description: string | null;
+  date: string;
   startTime: string; // "09:00" format
   endTime: string; // "10:00" format
-  location: string;
-  track?: "Leadership" | "Technology" | "Strategy" | "Innovation" | "Culture";
-  tags: string[];
+  location: string | null;
+  track?: "Leadership" | "Technology" | "Strategy" | "Innovation" | "Culture" | null;
+  tags: string[] | null;
+  eventId: string | null;
+  speakers: Speaker[];
   isUserSubmitted?: boolean;
 }
 
 export interface Attendee {
   id: string;
   name: string;
-  title: string;
-  company: string;
-  imageUrl: string;
-  initials: string;
+  title: string | null;
+  imageUrl: string | null;
+  initials: string | null;
 }
 
 export interface EventInfo {
-  name: string;
-  tagline: string;
-  dates: {
-    day1: string;
-    day2: string;
-    day3: string;
-  };
-  venue: string;
-  location: string;
-  purpose: string;
+  id: string;
+  title: string;
+  description: string | null;
+  startDate: string;
+  endDate: string;
+  venue: string | null;
+  location: string | null;
 }

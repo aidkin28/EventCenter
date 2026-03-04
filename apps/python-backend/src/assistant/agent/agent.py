@@ -5,7 +5,7 @@ from typing import Any
 from langgraph.prebuilt import create_react_agent
 from langgraph.graph.state import CompiledStateGraph
 
-from .llm import create_llm
+from .llm import create_llm_mini
 from .memory import get_memory_saver
 from .callbacks import LoggingCallbackHandler
 from ..tools import get_weather, get_commute_time, get_go_train_schedule
@@ -27,7 +27,7 @@ _agent: CompiledStateGraph | None = None
 
 def create_assistant_agent() -> CompiledStateGraph:
     """Create a new assistant agent with all tools configured."""
-    llm = create_llm()
+    llm = create_llm_mini()
     checkpointer = get_memory_saver()
 
     tools = [get_weather, get_commute_time, get_go_train_schedule]

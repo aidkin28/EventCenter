@@ -8,17 +8,20 @@ import {
   Users,
   Mic2,
   LayoutList,
-  CalendarCheck,
   Network,
   Menu,
   X,
   LogOut,
   Shield,
+  ChevronDown,
 } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@common/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { EventSwitchModal } from "./EventSwitchModal";
+import { format } from "date-fns";
 
 const NAV_ITEMS = [
   { href: "/agenda", label: "Agenda", icon: Calendar },
@@ -28,11 +31,42 @@ const NAV_ITEMS = [
   { href: "/networking", label: "Networking", icon: Network },
 ];
 
+function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function formatEventDates(startDate: string, endDate: string): string {
+  const start = new Date(startDate + "T12:00:00");
+  const end = new Date(endDate + "T12:00:00");
+  if (startDate === endDate) {
+    return format(start, "MMM d, yyyy");
+  }
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${format(start, "MMM d")}–${format(end, "d, yyyy")}`;
+  }
+  return `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [eventDropdownOpen, setEventDropdownOpen] = useState(false);
   const { data: session } = authClient.useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
+
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const userEvents = useEventStore((s) => s.userEvents);
+  const fetchUserEvents = useEventStore((s) => s.fetchUserEvents);
+  const switchEvent = useEventStore((s) => s.switchEvent);
+
+  useEffect(() => {
+    fetchUserEvents();
+  }, [fetchUserEvents]);
+
+  const hasMultipleEvents = userEvents.length > 1;
 
   return (
     <>
@@ -77,9 +111,13 @@ export function Sidebar() {
             </div>
             <div>
               <h1 className="text-sm font-semibold tracking-tight text-foreground">
-                Executive Offsite
+                {currentEvent?.title ?? "Event Center"}
               </h1>
-              <p className="text-[11px] text-muted-foreground">2026</p>
+              <p className="text-[11px] text-muted-foreground">
+                {currentEvent
+                  ? formatEventDates(currentEvent.startDate, currentEvent.endDate)
+                  : ""}
+              </p>
             </div>
           </div>
         </div>
@@ -144,19 +182,88 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-border px-6 py-4">
-          <p className="text-[11px] text-muted-foreground">
-            TBD
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            April 15–17, 2026
-          </p>
-          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut className="h-4 w-4" />
+        <div className="border-t border-border px-4 py-3">
+          {/* Event selector */}
+          {currentEvent && (
+            <div className="relative mb-3">
+              {hasMultipleEvents ? (
+                <>
+                  <button
+                    onClick={() => setEventDropdownOpen(!eventDropdownOpen)}
+                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted"
+                  >
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground truncate">
+                        {currentEvent.title}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatEventDates(currentEvent.startDate, currentEvent.endDate)}
+                      </p>
+                    </div>
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", eventDropdownOpen && "rotate-180")} />
+                  </button>
+                  {eventDropdownOpen && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border border-border bg-white shadow-md">
+                      {userEvents
+                        .filter((e) => e.id !== currentEvent.id)
+                        .map((event) => (
+                          <button
+                            key={event.id}
+                            onClick={() => {
+                              switchEvent(event.id);
+                              setEventDropdownOpen(false);
+                            }}
+                            className="flex w-full flex-col px-3 py-2 text-left transition-colors hover:bg-muted first:rounded-t-lg last:rounded-b-lg"
+                          >
+                            <p className="text-[11px] font-medium text-foreground">
+                              {event.title}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {formatEventDates(event.startDate, event.endDate)}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="px-2">
+                  <p className="text-[11px] font-medium text-foreground truncate">
+                    {currentEvent.title}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatEventDates(currentEvent.startDate, currentEvent.endDate)}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Logout */}
+          <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+            <LogOut className="h-4 w-4 flex-shrink-0" />
             <LogoutButton />
           </div>
+
+          {/* User info */}
+          {session?.user && (
+            <>
+              <div className="mx-1 my-2 border-t border-border" />
+              <div className="flex items-center gap-3 px-2">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {getInitials(session.user.name)}
+                </div>
+                <span className="truncate text-sm font-medium text-foreground">
+                  {session.user.name}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </aside>
+
+      {/* Event switch modal */}
+      <EventSwitchModal />
     </>
   );
 }

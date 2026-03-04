@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Session, Speaker } from "@/data/types";
+import type { Session } from "@/data/types";
 import { SessionBlock } from "./SessionBlock";
 
 interface DayCalendarProps {
   sessions: Session[];
-  speakers: Speaker[];
 }
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 7); // 7am to 7pm
@@ -16,15 +15,7 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
-export function DayCalendar({
-  sessions,
-  speakers,
-}: DayCalendarProps) {
-  const speakerMap = useMemo(
-    () => new Map(speakers.map((s) => [s.id, s])),
-    [speakers]
-  );
-
+export function DayCalendar({ sessions }: DayCalendarProps) {
   const sortedSessions = useMemo(
     () => [...sessions].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)),
     [sessions]
@@ -72,7 +63,7 @@ export function DayCalendar({
             >
               <SessionBlock
                 session={session}
-                speaker={speakerMap.get(session.speakerId)}
+                speakers={session.speakers}
                 from="agenda"
               />
             </div>

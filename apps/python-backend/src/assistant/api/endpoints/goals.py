@@ -10,7 +10,7 @@ from ...schemas.goals import (
     GoalRevisionResponse,
 )
 from ...graphs.expert_council import run_expert_council
-from ...agent.llm import create_llm
+from ...agent.llm import create_llm_mini
 from ...experts import parse_llm_json
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ async def revise_goal(request: GoalRevisionRequest) -> GoalRevisionResponse:
     logger.info(f"Received revision request for goal: {request.title}")
 
     try:
-        llm = create_llm()
+        llm = create_llm_mini()
 
         revision_prompt = f"""You are a goal optimization expert. Analyze this goal and provide an improved version.
 

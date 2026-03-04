@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/authorization";
 import { handleApiError, commonErrors } from "@/lib/api-error";
-import { getAzureOpenAIClient, getDeploymentName } from "@/lib/azure-openai";
+import { getAzureOpenAIClient, getDeploymentNameMini } from "@/lib/azure-openai";
 import { getEventContext } from "@/lib/chat/event-context-cache";
 import { searchDiscussions } from "@/lib/chat/search-discussions";
 import { db } from "@/lib/db";
@@ -23,7 +23,10 @@ const SEARCH_DISCUSSIONS_TOOL: ChatCompletionTool = {
   },
 };
 
-function buildSystemPrompt(context: NonNullable<Awaited<ReturnType<typeof getEventContext>>>): string {
+function buildSystemPrompt(
+  context: NonNullable<Awaited<ReturnType<typeof getEventContext>>>,
+  userName?: string | null,
+): string {
   const { event, sessions } = context;
 
   let prompt = `You are an AI assistant for the event "${event.title}".`;
@@ -31,6 +34,10 @@ function buildSystemPrompt(context: NonNullable<Awaited<ReturnType<typeof getEve
   prompt += `\nDates: ${event.startDate} to ${event.endDate}`;
   if (event.venue) prompt += `\nVenue: ${event.venue}`;
   if (event.location) prompt += `\nLocation: ${event.location}`;
+
+  if (userName) {
+    prompt += `\n\nYou are speaking with ${userName}.`;
+  }
 
   if (sessions.length > 0) {
     prompt += "\n\n=== SESSIONS ===";
@@ -55,7 +62,8 @@ function buildSystemPrompt(context: NonNullable<Awaited<ReturnType<typeof getEve
 - Answer questions about the event agenda, sessions, speakers, schedule, and logistics using the context above.
 - If the user asks about discussions, what people are talking about, networking conversations, or community sentiment, use the search_discussions tool.
 - Be concise and helpful. If you don't know something, say so.
-- Format responses in a readable way suitable for a small chat widget.`;
+- Use markdown formatting: **bold** for emphasis, bullet lists for multiple items, and headers for sections when appropriate.
+- Keep responses suitable for a small chat widget — avoid very long paragraphs.`;
 
   return prompt;
 }
@@ -93,10 +101,10 @@ export async function POST(request: Request) {
     }
 
     const client = getAzureOpenAIClient();
-    const deployment = getDeploymentName();
+    const deployment = getDeploymentNameMini();
 
     const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: buildSystemPrompt(context) },
+      { role: "system", content: buildSystemPrompt(context, user.name) },
     ];
 
     // Add conversation history (last 20 messages)
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
 
     const choice = response.choices[0];
 
-    // Handle tool call
+    // Handle tool call — cannot stream tool-call round-trips, return JSON
     if (choice.finish_reason === "tool_calls" && choice.message.tool_calls?.length) {
       const toolCall = choice.message.tool_calls[0];
 
@@ -134,21 +142,64 @@ export async function POST(request: Request) {
           content: discussionData,
         });
 
+        // Stream the follow-up response
         const followUp = await client.chat.completions.create({
           model: deployment,
           messages,
           temperature: 0.7,
           max_tokens: 1000,
+          stream: true,
         });
 
-        return NextResponse.json({
-          content: followUp.choices[0].message.content ?? "I couldn't generate a response.",
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            for await (const chunk of followUp) {
+              const delta = chunk.choices[0]?.delta?.content;
+              if (delta) {
+                controller.enqueue(encoder.encode(delta));
+              }
+            }
+            controller.close();
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Transfer-Encoding": "chunked",
+          },
         });
       }
     }
 
-    return NextResponse.json({
-      content: choice.message.content ?? "I couldn't generate a response.",
+    // No tool call — stream the response directly
+    const streamResponse = await client.chat.completions.create({
+      model: deployment,
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+      stream: true,
+    });
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of streamResponse) {
+          const delta = chunk.choices[0]?.delta?.content;
+          if (delta) {
+            controller.enqueue(encoder.encode(delta));
+          }
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+      },
     });
   } catch (error) {
     return handleApiError(error, "chat");

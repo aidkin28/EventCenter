@@ -49,6 +49,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
 
+  // Current event
+  currentEvent: one(events, {
+    fields: [users.currentEventId],
+    references: [events.id],
+  }),
+
   // 2FA relations
   twoFactor: one(twoFactors, {
     fields: [users.id],

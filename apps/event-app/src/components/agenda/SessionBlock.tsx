@@ -8,7 +8,7 @@ import { formatTimeRange } from "@/lib/time";
 
 interface SessionBlockProps {
   session: Session;
-  speaker: Speaker | undefined;
+  speakers: Speaker[];
   from?: string;
 }
 
@@ -20,7 +20,7 @@ const TRACK_COLORS: Record<string, string> = {
   Culture: "border-l-violet-500",
 };
 
-export function SessionBlock({ session, speaker, from }: SessionBlockProps) {
+export function SessionBlock({ session, speakers, from }: SessionBlockProps) {
   const trackColor = session.track
     ? TRACK_COLORS[session.track] ?? "border-l-gray-300"
     : "border-l-gray-300";
@@ -50,8 +50,10 @@ export function SessionBlock({ session, speaker, from }: SessionBlockProps) {
       <p className="text-sm font-medium leading-tight text-foreground group-hover:text-primary transition-colors">
         {session.title}
       </p>
-      {speaker && (
-        <p className="mt-1 text-xs text-muted-foreground">{speaker.name}</p>
+      {speakers.length > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {speakers.map((s) => s.name).join(", ")}
+        </p>
       )}
     </Link>
   );

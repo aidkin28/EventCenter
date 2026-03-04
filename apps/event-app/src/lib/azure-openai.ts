@@ -13,6 +13,12 @@ export function getAzureOpenAIClient(): AzureOpenAI {
   return client;
 }
 
+/** Full-capability model — agentic workflows, complex reasoning */
 export function getDeploymentName(): string {
-  return process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+  return process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-41";
+}
+
+/** Lighter/faster model — chatbot, insights, simple tool calls */
+export function getDeploymentNameMini(): string {
+  return process.env.AZURE_OPENAI_DEPLOYMENT_MINI || "gpt-41-mini";
 }

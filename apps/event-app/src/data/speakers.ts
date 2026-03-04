@@ -1,6 +1,5 @@
-import type { Speaker } from "./types";
-
-export const SPEAKERS: Speaker[] = [
+// Legacy mock data - no longer used by consumer pages (DB-driven now)
+export const SPEAKERS = [
   {
     id: "sp-1",
     name: "Victoria Chen",

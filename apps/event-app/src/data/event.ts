@@ -1,6 +1,5 @@
-import type { EventInfo } from "./types";
-
-export const EVENT_INFO: EventInfo = {
+// Legacy mock data - no longer used by consumer pages (DB-driven now)
+export const EVENT_INFO = {
   name: "Executive Leadership Offsite 2026",
   tagline: "Shaping Tomorrow's Vision, Today",
   dates: {

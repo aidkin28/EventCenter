@@ -1,6 +1,5 @@
-import type { Session } from "./types";
-
-export const SESSIONS: Session[] = [
+// Legacy mock data - no longer used by consumer pages (DB-driven now)
+export const SESSIONS = [
   // ── Day 1: Strategy & Vision ──
   {
     id: "s-01",

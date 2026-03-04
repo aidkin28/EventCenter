@@ -182,7 +182,7 @@ export function MindMap() {
   }
 
   const newNodePos = creatingFor ? getNewNodePosition() : null;
-  const newNodeRadius = creatingFor === "root" ? 50 : 40;
+  const newNodeRadius = creatingFor === "root" ? 65 : 52;
 
   return (
     <div className="relative flex h-full flex-col">
@@ -190,15 +190,15 @@ export function MindMap() {
         <h4 className="text-sm font-semibold text-foreground">Mind Map</h4>
         <button
           onClick={() => setCreatingFor("root")}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/[0.06] transition-colors"
+          className="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/[0.06] transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-4 w-4" />
           Add Root
         </button>
       </div>
 
       {/* SVG Canvas */}
-      <div className="flex-1 overflow-hidden rounded-lg border border-border/50 bg-secondary/30">
+      <div className="flex-1 overflow-auto rounded-lg border border-border/50 bg-secondary/30">
         {nodes.length === 0 && !creatingFor ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-xs text-muted-foreground">
@@ -258,7 +258,7 @@ export function MindMap() {
                 <circle
                   cx={node.positionX}
                   cy={node.positionY}
-                  r={node.parentId ? 40 : 50}
+                  r={node.parentId ? 52 : 65}
                   fill={
                     selectedNode === node.id
                       ? "rgba(220, 38, 38, 0.12)"
@@ -281,11 +281,11 @@ export function MindMap() {
                   dominantBaseline="central"
                   className="select-none pointer-events-none"
                   fill="var(--foreground)"
-                  fontSize={node.parentId ? 14 : 16}
+                  fontSize={node.parentId ? 17 : 20}
                   fontWeight={node.parentId ? 400 : 600}
                 >
-                  {node.label.length > 12
-                    ? node.label.slice(0, 10) + "..."
+                  {node.label.length > 16
+                    ? node.label.slice(0, 14) + "..."
                     : node.label}
                 </text>
 
@@ -299,21 +299,21 @@ export function MindMap() {
                   className="cursor-pointer"
                 >
                   <circle
-                    cx={node.positionX + (node.parentId ? 36 : 46)}
-                    cy={node.positionY - (node.parentId ? 30 : 40)}
-                    r={16}
+                    cx={node.positionX + (node.parentId ? 46 : 58)}
+                    cy={node.positionY - (node.parentId ? 38 : 50)}
+                    r={22}
                     fill="white"
                     stroke="var(--primary)"
                     strokeWidth="1.5"
                     opacity={0.85}
                   />
                   <text
-                    x={node.positionX + (node.parentId ? 36 : 46)}
-                    y={node.positionY - (node.parentId ? 30 : 40)}
+                    x={node.positionX + (node.parentId ? 46 : 58)}
+                    y={node.positionY - (node.parentId ? 38 : 50)}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="var(--primary)"
-                    fontSize="20"
+                    fontSize="26"
                     fontWeight="bold"
                     className="pointer-events-none select-none"
                   >
@@ -337,9 +337,9 @@ export function MindMap() {
                 />
                 <foreignObject
                   x={newNodePos.x - newNodeRadius + 4}
-                  y={newNodePos.y - 12}
+                  y={newNodePos.y - 15}
                   width={(newNodeRadius - 4) * 2}
-                  height={24}
+                  height={30}
                 >
                   <input
                     ref={inlineInputRef}
@@ -368,7 +368,7 @@ export function MindMap() {
                       outline: "none",
                       background: "transparent",
                       textAlign: "center",
-                      fontSize: "13px",
+                      fontSize: "15px",
                       color: "var(--foreground)",
                     }}
                   />

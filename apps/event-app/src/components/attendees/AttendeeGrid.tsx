@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { ATTENDEES } from "@/data/attendees";
-import { SPEAKERS } from "@/data/speakers";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventAttendees, useEventSpeakers } from "@/hooks/useEventData";
 import { AttendeeCard } from "./AttendeeCard";
 
 interface AttendeeGridProps {
@@ -10,16 +10,28 @@ interface AttendeeGridProps {
 }
 
 export function AttendeeGrid({ search }: AttendeeGridProps) {
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: attendees, isLoading } = useEventAttendees(currentEvent?.id);
+  const { data: speakers } = useEventSpeakers(currentEvent?.id);
+
   const speakerNames = useMemo(
-    () => new Set(SPEAKERS.map((s) => s.name)),
-    []
+    () => new Set(speakers.map((s) => s.name)),
+    [speakers]
   );
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return ATTENDEES;
+    if (!search.trim()) return attendees;
     const q = search.toLowerCase();
-    return ATTENDEES.filter((a) => a.name.toLowerCase().includes(q));
-  }, [search]);
+    return attendees.filter((a) => a.name.toLowerCase().includes(q));
+  }, [search, attendees]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+        Loading attendees...
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

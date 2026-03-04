@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,8 @@ import {
   DialogDescription,
 } from "@common/components/ui/dialog";
 import { useSessionStore } from "@/lib/stores/sessionStore";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventSessions } from "@/hooks/useEventData";
 import type { Session } from "@/data/types";
 
 interface AddSessionFormProps {
@@ -18,14 +21,23 @@ interface AddSessionFormProps {
 
 export function AddSessionForm({ open, onOpenChange }: AddSessionFormProps) {
   const addSession = useSessionStore((s) => s.addSession);
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: sessions } = useEventSessions(currentEvent?.id);
+
+  const dates = useMemo(() => {
+    const dateSet = new Set(sessions.map((s) => s.date));
+    return Array.from(dateSet).sort();
+  }, [sessions]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [speakerName, setSpeakerName] = useState("");
-  const [day, setDay] = useState<1 | 2 | 3>(1);
+  const [dateIdx, setDateIdx] = useState(0);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [location, setLocation] = useState("");
+
+  const selectedDate = dates[dateIdx] ?? new Date().toISOString().split("T")[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,12 +47,14 @@ export function AddSessionForm({ open, onOpenChange }: AddSessionFormProps) {
       id: `user-${Date.now()}`,
       title: title.trim(),
       description: description.trim(),
-      speakerId: "",
-      day,
+      date: selectedDate,
       startTime,
       endTime,
       location: location.trim() || "TBD",
+      track: null,
       tags: ["proposed"],
+      eventId: currentEvent?.id ?? null,
+      speakers: [],
       isUserSubmitted: true,
     };
 
@@ -49,7 +63,7 @@ export function AddSessionForm({ open, onOpenChange }: AddSessionFormProps) {
     setTitle("");
     setDescription("");
     setSpeakerName("");
-    setDay(1);
+    setDateIdx(0);
     setStartTime("09:00");
     setEndTime("10:00");
     setLocation("");
@@ -115,13 +129,16 @@ export function AddSessionForm({ open, onOpenChange }: AddSessionFormProps) {
                 Day
               </label>
               <select
-                value={day}
-                onChange={(e) => setDay(Number(e.target.value) as 1 | 2 | 3)}
+                value={dateIdx}
+                onChange={(e) => setDateIdx(Number(e.target.value))}
                 className={inputClass}
               >
-                <option value={1}>Day 1</option>
-                <option value={2}>Day 2</option>
-                <option value={3}>Day 3</option>
+                {dates.map((d, i) => (
+                  <option key={d} value={i}>
+                    Day {i + 1} ({format(new Date(d + "T12:00:00"), "MMM d")})
+                  </option>
+                ))}
+                {dates.length === 0 && <option value={0}>No dates</option>}
               </select>
             </div>
             <div>

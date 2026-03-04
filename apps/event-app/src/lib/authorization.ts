@@ -43,6 +43,7 @@ export interface AuthenticatedUser {
   timezone: string;
   blocked: boolean;
   lastTwoFactorAt: Date | null;
+  currentEventId: string | null;
 }
 
 /**
@@ -87,6 +88,7 @@ export async function requireAuth(
       timezone: "UTC",
       blocked: false,
       lastTwoFactorAt: null,
+      currentEventId: null,
     };
 
     const mockRateLimitResult: RateLimitResult = {
@@ -129,6 +131,7 @@ export async function requireAuth(
               timezone: "UTC",
               blocked: false,
               lastTwoFactorAt: null,
+              currentEventId: null,
             },
             rateLimitResult,
           };
@@ -145,6 +148,7 @@ export async function requireAuth(
             timezone: "UTC",
             blocked: false,
             lastTwoFactorAt: null,
+            currentEventId: null,
           },
           rateLimitResult: {
             success: true,
@@ -177,6 +181,7 @@ export async function requireAuth(
         timezone: true,
         blocked: true,
         lastTwoFactorAt: true,
+        currentEventId: true,
       },
     });
 
@@ -210,6 +215,7 @@ export async function requireAuth(
       timezone: dbUser.timezone,
       blocked: dbUser.blocked,
       lastTwoFactorAt: dbUser.lastTwoFactorAt,
+      currentEventId: dbUser.currentEventId ?? null,
     };
 
     // Check role permission

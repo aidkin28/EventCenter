@@ -1,11 +1,13 @@
+import { useMemo } from "react";
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 import type { Speaker, Session } from "@/data/types";
-import { SESSIONS } from "@/data/sessions";
 import { formatTimeRange } from "@/lib/time";
+import { format } from "date-fns";
 
 interface SpeakerCardProps {
   speaker: Speaker;
+  sessions: Session[];
 }
 
 const TRACK_COLORS: Record<string, string> = {
@@ -16,8 +18,11 @@ const TRACK_COLORS: Record<string, string> = {
   Culture: "border-l-violet-500",
 };
 
-export function SpeakerCard({ speaker }: SpeakerCardProps) {
-  const sessions = SESSIONS.filter((s) => s.speakerId === speaker.id);
+export function SpeakerCard({ speaker, sessions }: SpeakerCardProps) {
+  const speakerSessions = useMemo(
+    () => sessions.filter((s) => s.speakers.some((sp) => sp.id === speaker.id)),
+    [sessions, speaker.id]
+  );
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -43,13 +48,13 @@ export function SpeakerCard({ speaker }: SpeakerCardProps) {
       </div>
 
       {/* Sessions */}
-      {sessions.length > 0 && (
+      {speakerSessions.length > 0 && (
         <div className="mt-6">
           <p className="mb-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Sessions
           </p>
           <div className="grid gap-2">
-            {sessions.map((session) => (
+            {speakerSessions.map((session) => (
               <SessionRow key={session.id} session={session} />
             ))}
           </div>
@@ -64,6 +69,14 @@ function SessionRow({ session }: { session: Session }) {
     ? TRACK_COLORS[session.track] ?? "border-l-gray-300"
     : "border-l-gray-300";
 
+  const dateLabel = (() => {
+    try {
+      return format(new Date(session.date + "T12:00:00"), "MMM d");
+    } catch {
+      return session.date;
+    }
+  })();
+
   return (
     <Link
       href={`/sessions/${session.id}?from=speakers`}
@@ -73,7 +86,7 @@ function SessionRow({ session }: { session: Session }) {
       <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          Day {session.day} · {formatTimeRange(session.startTime, session.endTime)}
+          {dateLabel} · {formatTimeRange(session.startTime, session.endTime)}
         </span>
         <span className="flex items-center gap-1">
           <MapPin className="h-3 w-3" />

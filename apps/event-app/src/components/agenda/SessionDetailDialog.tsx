@@ -37,7 +37,7 @@ export function SessionDetailDialog({
                 {session.track}
               </Badge>
             )}
-            {session.tags.map((tag) => (
+            {(session.tags ?? []).map((tag) => (
               <Badge key={tag} variant="outline" className="text-[10px]">
                 {tag}
               </Badge>

@@ -4,13 +4,18 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@common/lib/utils";
-import { SPEAKERS } from "@/data/speakers";
+import { useEventStore } from "@/lib/stores/eventStore";
+import { useEventSpeakers, useEventSessions } from "@/hooks/useEventData";
 import { SpeakerCard } from "./SpeakerCard";
 
 const AUTO_INTERVAL = 10000;
 const PAUSE_DURATION = 30000;
 
 export function SpeakerCarousel() {
+  const currentEvent = useEventStore((s) => s.currentEvent);
+  const { data: speakers, isLoading } = useEventSpeakers(currentEvent?.id);
+  const { data: sessions } = useEventSessions(currentEvent?.id);
+
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
@@ -36,23 +41,25 @@ export function SpeakerCarousel() {
   );
 
   const handlePrev = useCallback(() => {
-    manualGo(index === 0 ? SPEAKERS.length - 1 : index - 1, -1);
-  }, [index, manualGo]);
+    if (speakers.length === 0) return;
+    manualGo(index === 0 ? speakers.length - 1 : index - 1, -1);
+  }, [index, manualGo, speakers.length]);
 
   const handleNext = useCallback(() => {
-    manualGo(index === SPEAKERS.length - 1 ? 0 : index + 1, 1);
-  }, [index, manualGo]);
+    if (speakers.length === 0) return;
+    manualGo(index === speakers.length - 1 ? 0 : index + 1, 1);
+  }, [index, manualGo, speakers.length]);
 
   // Auto-advance, disabled while paused
   useEffect(() => {
-    if (paused) return;
+    if (paused || speakers.length === 0) return;
     timerRef.current = setTimeout(() => {
-      go(index === SPEAKERS.length - 1 ? 0 : index + 1, 1);
+      go(index === speakers.length - 1 ? 0 : index + 1, 1);
     }, AUTO_INTERVAL);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [index, go, paused]);
+  }, [index, go, paused, speakers.length]);
 
   // Cleanup pause timer on unmount
   useEffect(() => {
@@ -60,6 +67,11 @@ export function SpeakerCarousel() {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     };
   }, []);
+
+  // Reset index when speakers change
+  useEffect(() => {
+    setIndex(0);
+  }, [speakers.length]);
 
   const variants = {
     enter: (dir: number) => ({
@@ -79,6 +91,24 @@ export function SpeakerCarousel() {
     }),
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+        Loading speakers...
+      </div>
+    );
+  }
+
+  if (speakers.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+        No speakers found for this event.
+      </div>
+    );
+  }
+
+  const currentSpeaker = speakers[index];
+
   return (
     <div className="flex flex-col items-center">
       {/* Carousel viewport */}
@@ -96,7 +126,7 @@ export function SpeakerCarousel() {
 
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={SPEAKERS[index].id}
+            key={currentSpeaker.id}
             custom={direction}
             variants={variants}
             initial="enter"
@@ -104,7 +134,7 @@ export function SpeakerCarousel() {
             exit="exit"
             transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <SpeakerCard speaker={SPEAKERS[index]} />
+            <SpeakerCard speaker={currentSpeaker} sessions={sessions} />
           </motion.div>
         </AnimatePresence>
 
@@ -127,7 +157,7 @@ export function SpeakerCarousel() {
 
       {/* Indicator dots */}
       <div className="mt-6 flex items-center gap-2">
-        {SPEAKERS.map((speaker, i) => (
+        {speakers.map((speaker, i) => (
           <button
             key={speaker.id}
             onClick={() => manualGo(i, i > index ? 1 : -1)}

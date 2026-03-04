@@ -1,21 +1,22 @@
 "use client";
 
 import { useMemo } from "react";
-import { SESSIONS } from "@/data/sessions";
 import { useCalendarStore } from "@/lib/stores/calendarStore";
 import { DraggableSession } from "./DraggableSession";
+import type { Session } from "@/data/types";
 
 interface SessionPoolProps {
-  dayFilter: 1 | 2 | 3;
+  sessions: Session[];
+  dateFilter: string;
 }
 
-export function SessionPool({ dayFilter }: SessionPoolProps) {
+export function SessionPool({ sessions, dateFilter }: SessionPoolProps) {
   const selectedIds = useCalendarStore((s) => s.selectedSessionIds);
   const addSession = useCalendarStore((s) => s.addSession);
 
   const daySessions = useMemo(
-    () => SESSIONS.filter((s) => s.day === dayFilter),
-    [dayFilter]
+    () => sessions.filter((s) => s.date === dateFilter),
+    [sessions, dateFilter]
   );
 
   return (

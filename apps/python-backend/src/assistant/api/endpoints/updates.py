@@ -21,7 +21,7 @@ from ...schemas.goals import (
     ProposedFollowUp,
     FollowUpConfirmationResult,
 )
-from ...agent.llm import create_llm
+from ...agent.llm import create_llm, create_llm_mini
 from ...experts import parse_llm_json
 from ...db.session import get_db
 from ...db.repositories.chat_repository import ChatSessionRepository
@@ -50,7 +50,7 @@ async def classify_event_intent(
 
     Returns True if the message is an event-creation/scheduling request.
     """
-    llm = create_llm()
+    llm = create_llm_mini()
 
     # Include last few messages for context
     recent_history = chat_history[-4:] if len(chat_history) > 4 else chat_history
@@ -116,7 +116,7 @@ async def analyze_for_follow_ups(
         logger.info("[FOLLOW-UP] No activities provided, returning empty")
         return [], ""
 
-    llm = create_llm()
+    llm = create_llm_mini()
 
     # Build activities text for the prompt
     activities_text = "\n".join([
@@ -230,7 +230,7 @@ async def detect_followup_response(
         logger.info("[FOLLOW-UP] Not awaiting confirmation or no proposals, returning False")
         return False, [], []
 
-    llm = create_llm()
+    llm = create_llm_mini()
     proposals = pending["proposals"]
 
     proposals_text = "\n".join([
@@ -300,7 +300,7 @@ async def parse_update(request: UpdateParseRequest) -> UpdateParseResponse:
     logger.info(f"Received update parse request for goal: {request.goal_id}")
 
     try:
-        llm = create_llm()
+        llm = create_llm_mini()
 
         parse_prompt = f"""You are analyzing a user's progress update for their goal. Extract structured information from their free-form text.
 
@@ -384,7 +384,7 @@ async def extract_activities(request: ExtractActivityRequest) -> ExtractActiviti
     logger.info("Received extract-activities request")
 
     try:
-        llm = create_llm()
+        llm = create_llm_mini()
 
         # Get current date in user's timezone for default
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

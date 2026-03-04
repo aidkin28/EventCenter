@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { eventSessions, sessionSpeakers } from "@/db/schema";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+
+  try {
+    const { eventId } = await params;
+
+    // Get all sessions for this event, with their speakers
+    const sessions = await db.query.eventSessions.findMany({
+      where: eq(eventSessions.eventId, eventId),
+      with: {
+        sessionSpeakers: {
+          with: {
+            speaker: true,
+          },
+        },
+      },
+    });
+
+    // Deduplicate speakers
+    const speakerMap = new Map<string, typeof sessions[0]["sessionSpeakers"][0]["speaker"]>();
+    for (const session of sessions) {
+      for (const ss of session.sessionSpeakers) {
+        if (!speakerMap.has(ss.speaker.id)) {
+          speakerMap.set(ss.speaker.id, ss.speaker);
+        }
+      }
+    }
+
+    return NextResponse.json(Array.from(speakerMap.values()));
+  } catch (error) {
+    return handleApiError(error, "events/[eventId]/speakers:GET");
+  }
+}

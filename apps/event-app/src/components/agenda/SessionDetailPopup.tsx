@@ -64,7 +64,7 @@ export function SessionDetailPopup({
                     {session.track}
                   </span>
                 )}
-                {session.tags.map((tag) => (
+                {(session.tags ?? []).map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"

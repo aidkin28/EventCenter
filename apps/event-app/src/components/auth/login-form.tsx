@@ -26,7 +26,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
@@ -35,6 +35,7 @@ export function LoginForm({
   async function handleSubmit(e: any) {
     e.preventDefault();
 
+    const email = username + "@scotiabank.com";
     const { data, error } = await authClient.signIn.email(
       {
         email,
@@ -69,7 +70,7 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6 w-full", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
+          <CardTitle>Login</CardTitle>
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
@@ -84,16 +85,21 @@ export function LoginForm({
           <form onSubmit={(e) => handleSubmit(e)}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  onChange={(e) => setEmail(e.target.value)}
-                  value={email}
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  className="focus-visible:border-red-500 focus-visible:ring-red-500/50"
-                />
+                <Label htmlFor="username">Email</Label>
+                <div className="flex h-9 items-center rounded-md border border-input bg-background shadow-xs focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/50">
+                  <input
+                    onChange={(e) => setUsername(e.target.value)}
+                    value={username}
+                    id="username"
+                    type="text"
+                    placeholder="john.doe"
+                    required
+                    className="flex-1 bg-transparent px-3 text-base outline-none placeholder:text-muted-foreground md:text-sm"
+                  />
+                  <span className="select-none border-l border-input bg-muted px-3 text-sm text-muted-foreground h-full flex items-center">
+                    @scotiabank.com
+                  </span>
+                </div>
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">
@@ -123,12 +129,6 @@ export function LoginForm({
                   )}
                 </Button>
               </div>
-            </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <a href="/signup" className="underline underline-offset-4">
-                Sign up
-              </a>
             </div>
           </form>
         </CardContent>

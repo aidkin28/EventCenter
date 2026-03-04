@@ -11,6 +11,7 @@ import {
   index,
   jsonb,
 } from "drizzle-orm/pg-core";
+import { events } from "./events";
 
 // ============================================
 // USER MODEL
@@ -46,6 +47,9 @@ export const users = pgTable(
     // 2FA lockout - track failed verification attempts
     twoFactorAttempts: integer("two_factor_attempts").default(0).notNull(),
     twoFactorLockedUntil: timestamp("two_factor_locked_until"),
+
+    // Current event
+    currentEventId: varchar("current_event_id", { length: 255 }).references(() => events.id, { onDelete: "set null" }),
 
     // Team relations
     activeTeamId: varchar("active_team_id", { length: 255 }),

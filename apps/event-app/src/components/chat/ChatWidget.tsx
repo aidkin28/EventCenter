@@ -7,6 +7,82 @@ import { useChatStore, type WidgetState } from "@/lib/stores/chatStore";
 
 const ANIMATION = { duration: 0.25, ease: "easeOut" as const };
 
+/** Lightweight markdown: **bold**, *italic*, `code`, and bullet lists */
+function renderMarkdown(text: string) {
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Bullet list item
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      elements.push(
+        <div key={i} className="flex gap-1.5 pl-1">
+          <span className="text-muted-foreground select-none">&#8226;</span>
+          <span>{formatInline(trimmed.slice(2))}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Header (### or ##)
+    if (trimmed.startsWith("### ")) {
+      elements.push(<div key={i} className="font-semibold mt-1">{formatInline(trimmed.slice(4))}</div>);
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      elements.push(<div key={i} className="font-semibold mt-1">{formatInline(trimmed.slice(3))}</div>);
+      continue;
+    }
+
+    // Empty line = paragraph break
+    if (!trimmed) {
+      if (i > 0 && i < lines.length - 1) {
+        elements.push(<div key={i} className="h-1.5" />);
+      }
+      continue;
+    }
+
+    elements.push(<div key={i}>{formatInline(line)}</div>);
+  }
+
+  return elements;
+}
+
+/** Inline formatting: **bold**, *italic*, `code` */
+function formatInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[2]) {
+      parts.push(<strong key={match.index}>{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<em key={match.index}>{match[3]}</em>);
+    } else if (match[4]) {
+      parts.push(
+        <code key={match.index} className="rounded bg-foreground/10 px-1 py-0.5 text-[0.85em]">
+          {match[4]}
+        </code>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
+
 export function ChatWidget() {
   const {
     messages,
@@ -72,8 +148,8 @@ export function ChatWidget() {
   }, [widgetState, setWidgetState]);
 
   const handleFabClick = useCallback(() => {
-    if (widgetState === "collapsed" || widgetState === "hover") {
-      setWidgetState("expanded");
+    if (widgetState === "collapsed") {
+      setWidgetState("hover");
     }
   }, [widgetState, setWidgetState]);
 
@@ -166,7 +242,6 @@ export function ChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask a question..."
                   className="flex-1 rounded-lg border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-                  onClick={handleFabClick}
                 />
                 <button
                   type="submit"
@@ -232,11 +307,11 @@ export function ChatWidget() {
                         : "bg-muted"
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && !messages.some((m) => m.role === "assistant" && m.content === "") && (
                 <div className="flex justify-start">
                   <div className="rounded-2xl bg-muted px-3 py-2">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

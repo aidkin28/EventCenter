@@ -1,7 +1,7 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { networkingGroups, networkingMessages } from "@/db/schema";
-import { getAzureOpenAIClient, getDeploymentName } from "@/lib/azure-openai";
+import { getAzureOpenAIClient, getDeploymentNameMini } from "@/lib/azure-openai";
 import { broadcastToGroup } from "@/lib/pubsub";
 
 const SYSTEM_PROMPT = `You analyze group chat conversations. Return a JSON array of 8-12 short insight strings.
@@ -45,7 +45,7 @@ export async function generateInsights(groupId: string): Promise<void> {
 
     const client = getAzureOpenAIClient();
     const response = await client.chat.completions.create({
-      model: getDeploymentName(),
+      model: getDeploymentNameMini(),
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },
