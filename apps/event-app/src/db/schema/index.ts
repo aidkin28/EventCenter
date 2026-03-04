@@ -36,5 +36,8 @@ export {
 // Attendees
 export { attendees } from "./attendees";
 
+// Events
+export { events, eventAttendees } from "./events";
+
 // All relations
 export * from "./relations";

@@ -7,6 +7,7 @@ export interface NetworkingGroup {
   creatorId: string;
   creatorName: string;
   topWords: string[];
+  insights: string[];
   memberCount: number;
   createdAt: string;
 }
@@ -71,6 +72,7 @@ interface NetworkingState {
   addGroup: (group: NetworkingGroup) => void;
   removeGroup: (groupId: string) => void;
   updateGroupTopWords: (groupId: string, topWords: string[]) => void;
+  updateGroupInsights: (groupId: string, insights: string[]) => void;
   updateGroupMemberCount: (groupId: string, memberCount: number) => void;
 }
 
@@ -151,6 +153,13 @@ export const useNetworkingStore = create<NetworkingState>((set) => ({
     set((state) => ({
       groups: state.groups.map((g) =>
         g.id === groupId ? { ...g, topWords } : g
+      ),
+    })),
+
+  updateGroupInsights: (groupId, insights) =>
+    set((state) => ({
+      groups: state.groups.map((g) =>
+        g.id === groupId ? { ...g, insights } : g
       ),
     })),
 

@@ -30,6 +30,7 @@ export async function GET(
         creatorId: networkingGroups.creatorId,
         creatorName: users.name,
         topWords: networkingGroups.topWords,
+        insights: networkingGroups.insights,
         memberCount: networkingGroups.memberCount,
         createdAt: networkingGroups.createdAt,
       })

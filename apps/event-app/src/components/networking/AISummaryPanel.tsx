@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useNetworkingStore } from "@/lib/stores/networkingStore";
-import { WordCloud } from "./WordCloud";
 
 interface SummaryData {
   summary: string;
@@ -16,7 +15,11 @@ export function AISummaryPanel() {
   const selectedGroupId = useNetworkingStore((s) => s.selectedGroupId);
   const isMember = useNetworkingStore((s) => s.isMember);
   const messages = useNetworkingStore((s) => s.messages);
+  const groups = useNetworkingStore((s) => s.groups);
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+
+  const insights =
+    groups.find((g) => g.id === selectedGroupId)?.insights ?? [];
 
   // Fetch summary when messages change significantly
   useEffect(() => {
@@ -47,9 +50,22 @@ export function AISummaryPanel() {
         <h4 className="text-sm font-semibold text-foreground">Insights</h4>
       </div>
 
-      {/* Word Cloud */}
-      <div className="flex-1 flex items-center justify-center min-h-[80px]">
-        <WordCloud />
+      {/* Insight labels */}
+      <div className="flex flex-wrap gap-1.5 min-h-[80px]">
+        {insights.length > 0 ? (
+          insights.map((insight) => (
+            <span
+              key={insight}
+              className="inline-flex rounded-full bg-primary/[0.06] px-2.5 py-1 text-xs font-medium text-primary"
+            >
+              {insight}
+            </span>
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Insights will appear as the conversation grows.
+          </p>
+        )}
       </div>
 
       {/* AI Summary text */}

@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { speakers } from "./speakers";
+import { events } from "./events";
 
 // Update THIS with the actual Session Types
 export const trackEnum = pgEnum("track", ["Leadership", "Technology", "Strategy", "Innovation", "Culture"]);
@@ -28,6 +29,9 @@ export const eventSessions = pgTable(
   "event_sessions",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
+    eventId: varchar("event_id", { length: 255 }).references(() => events.id, {
+      onDelete: "set null",
+    }),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description"),
     date: date("date").notNull(),
@@ -43,6 +47,7 @@ export const eventSessions = pgTable(
   (table) => [
     index("event_sessions_date_idx").on(table.date),
     index("event_sessions_track_idx").on(table.track),
+    index("event_sessions_event_id_idx").on(table.eventId),
   ]
 );
 

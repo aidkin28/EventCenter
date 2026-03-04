@@ -35,15 +35,15 @@ export function NetworkingGroupCard({
         </p>
       )}
 
-      {/* Top words badges */}
-      {group.topWords && group.topWords.length > 0 && (
+      {/* Insight badges */}
+      {group.insights && group.insights.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {group.topWords.slice(0, 5).map((word) => (
+          {group.insights.slice(0, 5).map((insight) => (
             <span
-              key={word}
+              key={insight}
               className="inline-flex rounded-full bg-primary/[0.06] px-2 py-0.5 text-[10px] font-medium text-primary"
             >
-              {word}
+              {insight}
             </span>
           ))}
         </div>

@@ -13,8 +13,10 @@ import {
   Menu,
   X,
   LogOut,
+  Shield,
 } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@common/lib/utils";
 import { useState } from "react";
 
@@ -29,6 +31,8 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = authClient.useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
 
   return (
     <>
@@ -111,6 +115,32 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Admin nav */}
+          {isAdmin && (
+            <>
+              <div className="mx-1 my-2 border-t border-border" />
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                  pathname.startsWith("/admin")
+                    ? "bg-primary/[0.06] text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Shield
+                  className={cn(
+                    "h-[18px] w-[18px] flex-shrink-0",
+                    pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
+                  )}
+                  strokeWidth={pathname.startsWith("/admin") ? 2 : 1.5}
+                />
+                Admin
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* Footer */}

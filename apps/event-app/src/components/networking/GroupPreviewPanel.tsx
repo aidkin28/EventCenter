@@ -12,6 +12,7 @@ interface GroupDetail {
   name: string;
   description: string | null;
   topWords: string[];
+  insights: string[];
   memberCount: number;
   isMember: boolean;
   creatorName: string;
@@ -221,15 +222,15 @@ export function GroupPreviewPanel() {
                 )}
               </div>
 
-              {/* Topic word badges */}
-              {detail?.topWords && detail.topWords.length > 0 && (
+              {/* Insight badges */}
+              {detail?.insights && detail.insights.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {detail.topWords.slice(0, 8).map((word) => (
+                  {detail.insights.slice(0, 8).map((insight) => (
                     <span
-                      key={word}
+                      key={insight}
                       className="inline-flex rounded-full bg-primary/[0.06] px-2 py-0.5 text-[10px] font-medium text-primary"
                     >
-                      {word}
+                      {insight}
                     </span>
                   ))}
                 </div>

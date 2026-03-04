@@ -34,6 +34,11 @@ import {
   attendees,
 } from "./attendees";
 
+import {
+  events,
+  eventAttendees,
+} from "./events";
+
 
 // ============================================
 // USER RELATIONS
@@ -162,7 +167,11 @@ export const networkingMindMapNodesRelations = relations(networkingMindMapNodes,
 // EVENT SESSION RELATIONS
 //===================================================================
 
-export const eventSessionsRelations = relations(eventSessions, ({ many }) => ({
+export const eventSessionsRelations = relations(eventSessions, ({ one, many }) => ({
+  event: one(events, {
+    fields: [eventSessions.eventId],
+    references: [events.id],
+  }),
   sessionSpeakers: many(sessionSpeakers),
   upvotes: many(sessionUpvotes),
   comments: many(sessionComments),
@@ -235,9 +244,30 @@ export const speakersRelations = relations(speakers, ({ one, many }) => ({
 // ATTENDEE RELATIONS
 //====================================================================
 
-export const attendeesRelations = relations(attendees, ({ one }) => ({
+export const attendeesRelations = relations(attendees, ({ one, many }) => ({
   user: one(users, {
     fields: [attendees.userId],
     references: [users.id],
+  }),
+  eventAttendees: many(eventAttendees),
+}));
+
+//====================================================================
+// EVENT RELATIONS
+//====================================================================
+
+export const eventsRelations = relations(events, ({ many }) => ({
+  sessions: many(eventSessions),
+  eventAttendees: many(eventAttendees),
+}));
+
+export const eventAttendeesRelations = relations(eventAttendees, ({ one }) => ({
+  event: one(events, {
+    fields: [eventAttendees.eventId],
+    references: [events.id],
+  }),
+  attendee: one(attendees, {
+    fields: [eventAttendees.attendeeId],
+    references: [attendees.id],
   }),
 }));

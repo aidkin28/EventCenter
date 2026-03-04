@@ -25,6 +25,7 @@ export function useNetworkingPolling() {
   const removeMindMapNode = useNetworkingStore((s) => s.removeMindMapNode);
   const updateGroupMemberCount = useNetworkingStore((s) => s.updateGroupMemberCount);
   const updateGroupTopWords = useNetworkingStore((s) => s.updateGroupTopWords);
+  const updateGroupInsights = useNetworkingStore((s) => s.updateGroupInsights);
   const setWsConnected = useNetworkingStore((s) => s.setWsConnected);
 
   const wsClientRef = useRef<WebPubSubClient | null>(null);
@@ -75,10 +76,14 @@ export function useNetworkingPolling() {
 
       switch (type) {
         case "message:new": {
-          const msg = data as unknown as NetworkingMessage & { topWords?: string[] };
+          const msg = data as unknown as NetworkingMessage;
           appendMessages([msg]);
-          if (msg.topWords && msg.groupId) {
-            updateGroupTopWords(msg.groupId, msg.topWords);
+          break;
+        }
+        case "insights:updated": {
+          const { insights } = data as unknown as { insights: string[] };
+          if (insights && selectedGroupId) {
+            updateGroupInsights(selectedGroupId, insights);
           }
           break;
         }
@@ -116,6 +121,7 @@ export function useNetworkingPolling() {
       removeMindMapNode,
       updateGroupMemberCount,
       updateGroupTopWords,
+      updateGroupInsights,
       setGroups,
       selectedGroupId,
     ]
