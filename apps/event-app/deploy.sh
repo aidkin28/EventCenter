@@ -256,19 +256,7 @@ else
 fi
 
 echo ""
-
-if [ "$AUTO_YES" = true ]; then
-  echo "  Pushing to azure (master)..."
-else
-  echo "  Ready to push: $CURRENT_BRANCH -> azure/master"
-  read -p "  Push now? (Y/n): " DO_PUSH
-  if [ "$DO_PUSH" = "n" ] || [ "$DO_PUSH" = "N" ]; then
-    echo "  Push skipped. You can push manually:"
-    echo "    cd $STANDALONE_DIR && git push azure master --force"
-    exit 0
-  fi
-fi
-
+echo "  Pushing to azure (master) --force..."
 git push azure master --force
 
 echo ""
