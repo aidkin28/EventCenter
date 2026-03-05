@@ -7,6 +7,7 @@ import { attendees } from "@/db/schema";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { createEventAgent } from "@/lib/ai/agent";
 import { agentStreamToResponse } from "@/lib/ai/stream";
+import { runSiaCommand } from "@/lib/networking/sia-agent";
 
 export async function POST(request: Request) {
   try {
@@ -31,6 +32,24 @@ export async function POST(request: Request) {
     });
 
     const eventId = attendee?.eventAttendees?.[0]?.eventId;
+
+    // Route @sia commands to the Sia agent
+    if (/@sia\b/i.test(message)) {
+      const result = await runSiaCommand(message, user.id, eventId ?? null);
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(result.content));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Transfer-Encoding": "chunked",
+        },
+      });
+    }
     if (!eventId) {
       return commonErrors.notFound("Event enrollment");
     }

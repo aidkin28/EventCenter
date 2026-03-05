@@ -27,6 +27,8 @@ export interface HoverBarMenuArrayProps extends ButtonProps {
   menuBarItemIsTabTrigger?: boolean;
   onTabClick?: (e: any, index: number) => void;
   rightJSX?: React.ReactNode;
+  activeItemClassName?: string;
+  inactiveItemClassName?: string;
 }
 
 export const HoverBarMenuArray = forwardRef<HTMLDivElement, HoverBarMenuArrayProps>(
@@ -48,6 +50,8 @@ export const HoverBarMenuArray = forwardRef<HTMLDivElement, HoverBarMenuArrayPro
       menuBarItemIsTabTrigger = false,
       onTabClick,
       rightJSX,
+      activeItemClassName,
+      inactiveItemClassName,
       ...props
     },
     ref
@@ -304,7 +308,12 @@ export const HoverBarMenuArray = forwardRef<HTMLDivElement, HoverBarMenuArrayPro
                   <div
                     key={"parentDiv" + index}
                     ref={elementRef}
-                    className={cn(menuItemFocused !== null && menuItemFocused === index ? "text-darkPurple" : "text-secondary-dark")}
+                    className={cn(
+                      menuItemFocused !== null && menuItemFocused === index
+                        ? cn("text-darkPurple", activeItemClassName)
+                        : cn("text-secondary-dark", inactiveItemClassName),
+                      "rounded-lg"
+                    )}
                     onClick={(e) => {
                       handleMenuClick(e, index);
                     }}
@@ -314,7 +323,7 @@ export const HoverBarMenuArray = forwardRef<HTMLDivElement, HoverBarMenuArrayPro
                       key={title}
                       variant="ghost"
                       size="md"
-                      className={cn("group flex max-h-[40px] gap-x-2", { "text-darkPurple dark:text-primary-dark": index === menuItemFocused })}
+                      className={cn("group flex max-h-[40px] gap-x-2", { "text-darkPurple dark:text-primary-dark": index === menuItemFocused }, buttonClassName)}
                     >
                       <div className="flex w-full items-center justify-between gap-x-2">
                         <span className="flex-grow text-center">{title}</span>
@@ -362,7 +371,12 @@ export const HoverBarMenuArray = forwardRef<HTMLDivElement, HoverBarMenuArrayPro
                   <div
                     key={"parentDiv" + index}
                     ref={elementRef}
-                    className={cn(menuItemFocused !== null && menuItemFocused === index ? "text-darkPurple" : "text-secondary-dark")}
+                    className={cn(
+                      menuItemFocused !== null && menuItemFocused === index
+                        ? cn("text-darkPurple", activeItemClassName)
+                        : cn("text-secondary-dark", inactiveItemClassName),
+                      "rounded-lg"
+                    )}
                     onClick={(e) => {
                       handleMenuClick(e, index);
                     }}

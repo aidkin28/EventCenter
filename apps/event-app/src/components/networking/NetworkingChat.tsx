@@ -5,6 +5,8 @@ import { Send, LogIn, LogOut as LogOutIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNetworkingStore } from "@/lib/stores/networkingStore";
 import { ChatMessage } from "./ChatMessage";
+import { useSiaMention } from "@/hooks/useSiaMention";
+import { SiaMentionPopover } from "@/components/chat/SiaMentionPopover";
 
 interface NetworkingChatProps {
   showJoinButton?: boolean;
@@ -25,9 +27,33 @@ export function NetworkingChat({ showJoinButton = true }: NetworkingChatProps) {
   const [sending, setSending] = useState(false);
   const [joining, setJoining] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const isAtBottomRef = useRef(true);
 
   const group = groups.find((g) => g.id === selectedGroupId);
+
+  const sia = useSiaMention(input, chatInputRef.current);
+
+  const handleSiaKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const result = sia.handleKeyDown(e);
+      if (typeof result === "string") {
+        setInput(result);
+      }
+    },
+    [sia]
+  );
+
+  const handleSiaSelect = useCallback(
+    (index: number) => {
+      const result = sia.selectOption(index);
+      if (typeof result === "string") {
+        setInput(result);
+        chatInputRef.current?.focus();
+      }
+    },
+    [sia]
+  );
 
   // Track if user is scrolled to bottom
   const handleScroll = useCallback(() => {
@@ -160,11 +186,20 @@ export function NetworkingChat({ showJoinButton = true }: NetworkingChatProps) {
       {isMember && (
         <form
           onSubmit={handleSend}
-          className="flex items-center gap-2 border-t border-border px-4 py-3"
+          className="relative flex items-center gap-2 border-t border-border px-4 py-3"
         >
+          {sia.isOpen && (
+            <SiaMentionPopover
+              options={sia.options}
+              selectedIndex={sia.selectedIndex}
+              onSelect={handleSiaSelect}
+            />
+          )}
           <input
+            ref={chatInputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleSiaKeyDown}
             placeholder="Type a message..."
             maxLength={5000}
             className="flex-1 rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"

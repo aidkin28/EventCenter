@@ -32,6 +32,7 @@ export const networkingGroups = pgTable(
     eventId: varchar("event_id", { length: 255 }).references(() => events.id, {
       onDelete: "cascade",
     }),
+    coCreatorIds: jsonb("co_creator_ids").$type<string[]>().default([]),
     topWords: jsonb("top_words").$type<string[]>().default([]),
     insights: jsonb("insights").$type<{ title: string; description: string }[]>().default([]),
     memberCount: integer("member_count").default(0).notNull(),

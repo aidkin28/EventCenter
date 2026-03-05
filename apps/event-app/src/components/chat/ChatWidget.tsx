@@ -3,7 +3,9 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { MessageCircle, X, Minus, Trash2, Send, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useChatStore, type WidgetState } from "@/lib/stores/chatStore";
+import { useChatStore } from "@/lib/stores/chatStore";
+import { useSiaMention } from "@/hooks/useSiaMention";
+import { SiaMentionPopover } from "./SiaMentionPopover";
 
 const ANIMATION = { duration: 0.25, ease: "easeOut" as const };
 
@@ -95,10 +97,35 @@ export function ChatWidget() {
   } = useChatStore();
 
   const [input, setInput] = useState("");
+  const [panelSize, setPanelSize] = useState({ w: 320, h: 280 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeDrag = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
+
+  const sia = useSiaMention(input, inputRef.current);
+
+  const handleSiaKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const result = sia.handleKeyDown(e);
+      if (typeof result === "string") {
+        setInput(result);
+      }
+    },
+    [sia]
+  );
+
+  const handleSiaSelect = useCallback(
+    (index: number) => {
+      const result = sia.selectOption(index);
+      if (typeof result === "string") {
+        setInput(result);
+        inputRef.current?.focus();
+      }
+    },
+    [sia]
+  );
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -114,15 +141,58 @@ export function ChatWidget() {
     }
   }, [widgetState]);
 
+  // Grow panel when user starts typing in hover mode
+  useEffect(() => {
+    if (widgetState === "hover" && input.length === 1) {
+      setPanelSize({ w: 400, h: 520 });
+      setWidgetState("expanded");
+    }
+  }, [input, widgetState, setWidgetState]);
+
+  // Reset size when collapsing
+  useEffect(() => {
+    if (widgetState === "collapsed") {
+      setPanelSize({ w: 320, h: 280 });
+    }
+  }, [widgetState]);
+
+  // Resize drag handler
+  const handleResizeDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeDrag.current = { startX: e.clientX, startY: e.clientY, startW: panelSize.w, startH: panelSize.h };
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeDrag.current) return;
+      const dx = resizeDrag.current.startX - ev.clientX;
+      const dy = resizeDrag.current.startY - ev.clientY;
+      setPanelSize({
+        w: Math.min(800, Math.max(280, resizeDrag.current.startW + dx)),
+        h: Math.min(900, Math.max(200, resizeDrag.current.startH + dy)),
+      });
+    };
+
+    const onUp = () => {
+      resizeDrag.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [panelSize]);
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       const trimmed = input.trim();
       if (!trimmed || isLoading) return;
       setInput("");
+      // Ensure expanded size before sending (sendMessage sets widgetState to expanded)
+      if (panelSize.h < 520) setPanelSize({ w: 400, h: 520 });
       sendMessage(trimmed);
     },
-    [input, isLoading, sendMessage]
+    [input, isLoading, sendMessage, panelSize]
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -178,37 +248,91 @@ export function ChatWidget() {
           </motion.button>
         )}
 
-        {widgetState === "hover" && (
+        {(widgetState === "hover" || widgetState === "expanded") && (
           <motion.div
-            key="hover"
+            key="panel"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={ANIMATION}
-            className="flex w-80 flex-col overflow-hidden rounded-2xl bg-background shadow-xl border"
-            style={{ height: 280 }}
+            className="relative flex flex-col overflow-hidden rounded-2xl bg-background shadow-xl border transition-[width,height] duration-300 ease-out"
+            style={{ width: panelSize.w, height: panelSize.h }}
           >
+            {/* Top-left resize handle */}
+            <div
+              onMouseDown={handleResizeDown}
+              className="absolute left-0 top-0 z-20 h-4 w-4 cursor-nwse-resize"
+              title="Drag to resize"
+            >
+              <svg viewBox="0 0 16 16" className="h-full w-full text-muted-foreground/40">
+                <line x1="4" y1="0" x2="0" y2="4" stroke="currentColor" strokeWidth="1.5" />
+                <line x1="9" y1="0" x2="0" y2="9" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between border-b px-4 py-3">
               <span className="text-sm font-semibold">Event Assistant</span>
-              <button
-                onClick={() => setWidgetState("collapsed")}
-                className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                {widgetState === "expanded" && (
+                  <button
+                    onClick={clearChat}
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                    aria-label="Clear chat"
+                    title="Clear chat"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setWidgetState("collapsed")}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                  aria-label={widgetState === "expanded" ? "Minimize" : "Close"}
+                  title={widgetState === "expanded" ? "Minimize" : "Close"}
+                >
+                  {widgetState === "expanded" ? (
+                    <Minus className="h-4 w-4" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Message preview */}
-            <div className="flex-1 overflow-hidden px-4 py-2">
-              {recentMessages.length === 0 ? (
-                <p className="text-xs text-muted-foreground pt-2">
+            {/* Messages / Preview */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {messages.length === 0 && (
+                <p className={`text-muted-foreground ${widgetState === "expanded" ? "text-sm text-center pt-8" : "text-xs pt-1"}`}>
                   Ask me about the event agenda, speakers, or discussions.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {recentMessages.map((msg) => (
+              )}
+              {widgetState === "expanded"
+                ? messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        {msg.role === "assistant" && !msg.content ? (
+                          <div className="flex items-center gap-1.5 py-0.5">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Thinking...</span>
+                          </div>
+                        ) : msg.role === "assistant" ? (
+                          renderMarkdown(msg.content)
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                    </div>
+                  ))
+                : recentMessages.map((msg) => (
                     <div
                       key={msg.id}
                       className={`text-xs leading-relaxed ${
@@ -228,98 +352,6 @@ export function ChatWidget() {
                       </span>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-
-            {/* Input */}
-            <form onSubmit={handleSubmit} className="border-t px-3 py-2">
-              <div className="flex items-center gap-2">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask a question..."
-                  className="flex-1 rounded-lg border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="rounded-lg bg-primary p-1.5 text-primary-foreground disabled:opacity-50"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-
-        {widgetState === "expanded" && (
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={ANIMATION}
-            className="flex w-[400px] flex-col overflow-hidden rounded-2xl bg-background shadow-xl border"
-            style={{ height: 520 }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <span className="text-sm font-semibold">Event Assistant</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={clearChat}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                  aria-label="Clear chat"
-                  title="Clear chat"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setWidgetState("collapsed")}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                  aria-label="Minimize"
-                  title="Minimize"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-              {messages.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center pt-8">
-                  Ask me about the event agenda, speakers, sessions, or what people are discussing.
-                </p>
-              )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {msg.role === "assistant" && !msg.content ? (
-                      <div className="flex items-center gap-1.5 py-0.5">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Thinking...</span>
-                      </div>
-                    ) : msg.role === "assistant" ? (
-                      renderMarkdown(msg.content)
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
-                </div>
-              ))}
               {error && (
                 <div className="text-center text-xs text-destructive py-1">
                   {error}
@@ -329,22 +361,30 @@ export function ChatWidget() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSubmit} className="border-t px-4 py-3">
+            <form onSubmit={handleSubmit} className="relative border-t px-4 py-3">
+              {sia.isOpen && (
+                <SiaMentionPopover
+                  options={sia.options}
+                  selectedIndex={sia.selectedIndex}
+                  onSelect={handleSiaSelect}
+                />
+              )}
               <div className="flex items-center gap-2">
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleSiaKeyDown}
                   placeholder="Ask a question..."
-                  className="flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  className="flex-1 rounded-lg border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="rounded-lg bg-primary p-2 text-primary-foreground disabled:opacity-50"
+                  className="rounded-lg bg-primary p-1.5 text-primary-foreground disabled:opacity-50"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                 </button>
               </div>
             </form>

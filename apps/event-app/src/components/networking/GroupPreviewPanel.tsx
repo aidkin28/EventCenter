@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { X, LogIn, ExternalLink, Users, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNetworkingStore, type MindMapNode, type NetworkingMessage } from "@/lib/stores/networkingStore";
 import { ChatMessage } from "./ChatMessage";
+import { useSiaMention } from "@/hooks/useSiaMention";
+import { SiaMentionPopover } from "@/components/chat/SiaMentionPopover";
 
 interface Insight {
   title: string;
@@ -40,6 +42,30 @@ export function GroupPreviewPanel() {
   const [chatInput, setChatInput] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
+  const sia = useSiaMention(chatInput, chatInputRef.current);
+
+  const handleSiaKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const result = sia.handleKeyDown(e);
+      if (typeof result === "string") {
+        setChatInput(result);
+      }
+    },
+    [sia]
+  );
+
+  const handleSiaSelect = useCallback(
+    (index: number) => {
+      const result = sia.selectOption(index);
+      if (typeof result === "string") {
+        setChatInput(result);
+        chatInputRef.current?.focus();
+      }
+    },
+    [sia]
+  );
 
   // Fetch group detail
   useEffect(() => {
@@ -340,11 +366,20 @@ export function GroupPreviewPanel() {
       {previewIsMember && (
         <form
           onSubmit={handleSendPreview}
-          className="flex items-center gap-2 border-t border-border px-4 py-3"
+          className="relative flex items-center gap-2 border-t border-border px-4 py-3"
         >
+          {sia.isOpen && (
+            <SiaMentionPopover
+              options={sia.options}
+              selectedIndex={sia.selectedIndex}
+              onSelect={handleSiaSelect}
+            />
+          )}
           <input
+            ref={chatInputRef}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={handleSiaKeyDown}
             placeholder="Type a message..."
             maxLength={5000}
             className="flex-1 rounded-lg border border-input bg-transparent px-3 py-1.5 text-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"

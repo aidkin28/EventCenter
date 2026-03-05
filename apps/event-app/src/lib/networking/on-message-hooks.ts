@@ -4,13 +4,14 @@ import { generateInsights } from "./generate-insights";
 export function onMessageCreated(
   groupId: string,
   messageContent: string,
-  nonAiCount: number
+  nonAiCount: number,
+  userId: string
 ): void {
   const hasSiaMention = /@sia\b/i.test(messageContent);
   const isFifthMessage = nonAiCount % 5 === 0;
 
   if (hasSiaMention || isFifthMessage) {
-    runSiaAgent(groupId).catch((err) =>
+    runSiaAgent(groupId, userId).catch((err) =>
       console.error("[onMessageCreated] sia error:", err)
     );
   }

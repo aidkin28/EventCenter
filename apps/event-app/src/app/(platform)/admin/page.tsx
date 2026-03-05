@@ -28,6 +28,10 @@ export default function AdminPage() {
         defaultTabIndex={0}
         onClick={(_e: any, index: number) => setActiveTab(index)}
         className="mb-6"
+        underlineAnimation={false}
+        buttonClassName="border-0 ring-0 shadow-none outline-none hover:bg-muted/60"
+        activeItemClassName="bg-muted/80 text-foreground"
+        inactiveItemClassName="text-muted-foreground"
       />
 
       <ActiveComponent />
