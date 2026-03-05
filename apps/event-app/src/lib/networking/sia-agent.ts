@@ -261,8 +261,11 @@ function buildSystemPrompt(
   hasMention: boolean
 ): string {
   const mentionInstructions = hasMention
-    ? `- Respond to ALL messages that mention @sia — these are direct requests to you
-- Use the web_search tool to research topics when helpful
+    ? `- Focus primarily on the MOST RECENT message — that's who tagged you and what they want
+- If it's a direct question or request (research, create group, post message), use the appropriate tool
+- If it's just conversational (no specific command), reply in 1-2 short sentences like a colleague would — brief, natural, helpful
+- Do NOT write long paragraphs for casual conversation. Match the energy: short message gets a short reply
+- Use the web_search tool only when the question genuinely needs research
 - Use post_message_to_group when asked to send a message to another group
 - Use create_networking_group when asked to create a new group — pick a short name, add a description, and write an opening message that includes relevant context from the current conversation`
     : `- You are auto-joining this conversation to add value — no one asked you directly
@@ -393,15 +396,15 @@ export async function runSiaCommand(
   // Strip @sia prefix
   const stripped = rawMessage.replace(/@sia\s*/i, "").trim();
 
-  const systemPrompt = `You are Sia, an AI research assistant.
-The user has invoked you with a command. Determine the intent and act accordingly:
+  const systemPrompt = `You are Sia, a friendly AI assistant.
 
-- If the message asks to "create a group" or "create networking group" about a topic, use the create_networking_group tool. Pick a short, clear group name (2-5 words). Write a brief description. Write an opening message that summarizes relevant context from the user's message to kick off the conversation.
-- If the message starts with "research" or is a general question/topic, use the web_search tool to find relevant information and provide a concise, well-cited answer.
-- If the message starts with "add message to" followed by a group name and message content, use the post_message_to_group tool to post the message.
-- For anything else, do your best to help using the available tools.
+Determine the intent of the user's message and act accordingly:
+- "create a group" / "create networking group" → use create_networking_group tool (short name, brief description, opening message with context)
+- "research" or a factual question → use web_search tool, give a concise cited answer
+- "add message to [group]" → use post_message_to_group tool
+- Casual/conversational → reply in 1-2 short sentences like a colleague, no tools needed
 
-Keep responses concise and helpful.`;
+Keep all responses concise. Short messages get short replies.`;
 
   const createGroupTool = makeCreateNetworkingGroupTool({ invokingUserId, eventId });
 
