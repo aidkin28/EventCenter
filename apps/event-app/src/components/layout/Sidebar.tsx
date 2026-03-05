@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Calendar,
@@ -23,6 +22,7 @@ import { cn } from "@common/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import { useEventStore, type EventData } from "@/lib/stores/eventStore";
 import { EventSwitchModal } from "./EventSwitchModal";
+import { ScotiabankHexLogo } from "@/components/ScotiabankHexLogo";
 import { format } from "date-fns";
 
 const NAV_ITEMS = [
@@ -138,7 +138,9 @@ export function Sidebar() {
         {/* Logo / Event Name */}
         <div className="flex h-16 items-center px-6">
           <div className="flex items-center gap-3">
-            <Image src="/scotia_logo.png" alt="Event Logo" width={32} height={32} unoptimized className="h-8 w-8 rounded-lg" />
+            <div className="h-8 w-8 flex-shrink-0">
+              <ScotiabankHexLogo />
+            </div>
             <div>
               <h1 className="text-sm font-semibold tracking-tight text-foreground">
                 {currentEvent?.title ?? "Event Center"}

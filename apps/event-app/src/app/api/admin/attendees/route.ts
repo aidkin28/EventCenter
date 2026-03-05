@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users, accounts, eventAttendees } from "@/db/schema";
 import { requireAuth } from "@/lib/authorization";
@@ -79,6 +79,26 @@ export async function POST(request: Request) {
             updatedAt: new Date(),
           })
           .where(eq(users.id, existing.id));
+
+        // Ensure credential account exists so password reset works
+        const existingAccount = await db.query.accounts.findFirst({
+          where: and(
+            eq(accounts.userId, existing.id),
+            eq(accounts.providerId, "credential")
+          ),
+        });
+        if (!existingAccount) {
+          const now = new Date();
+          await db.insert(accounts).values({
+            id: createId(),
+            accountId: existing.id,
+            providerId: "credential",
+            userId: existing.id,
+            password: null,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
       }
     }
 
@@ -103,9 +123,11 @@ export async function POST(request: Request) {
         updatedAt: now,
       });
 
-      if (validated.email && validated.password) {
-        const { hashPassword } = await import("better-auth/crypto");
-        const hashedPassword = await hashPassword(validated.password);
+      // Always create a credential account so password reset works
+      if (validated.email) {
+        const hashedPassword = validated.password
+          ? await (await import("better-auth/crypto")).hashPassword(validated.password)
+          : null;
 
         await db.insert(accounts).values({
           id: createId(),
