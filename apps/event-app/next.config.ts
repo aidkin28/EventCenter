@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: standalone
     ? path.join(__dirname, "../../")
     : undefined,
+  outputFileTracingIncludes: standalone
+    ? { "/**": ["./node_modules/styled-jsx/**"] }
+    : undefined,
   transpilePackages: ["common"],
   serverExternalPackages: [
     "pg",

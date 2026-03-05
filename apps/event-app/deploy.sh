@@ -135,6 +135,35 @@ if [ -d "$APP_DIR/public" ]; then
   cp -rL "$APP_DIR/public" "$STATIC_TARGET/public"
 fi
 
+# Fix pnpm hoisting gaps — pnpm virtual store has modules but they aren't
+# linked into node_modules/ where Node can resolve them. Copy everything
+# from .pnpm/node_modules/* into the app-level node_modules.
+PNPM_HOISTED="$STANDALONE_DIR/node_modules/.pnpm/node_modules"
+if [ -d "$PNPM_HOISTED" ]; then
+  echo "  Fixing pnpm hoisting gaps..."
+  mkdir -p "$STATIC_TARGET/node_modules"
+  for pkg in "$PNPM_HOISTED"/*; do
+    pkgname=$(basename "$pkg")
+    if [ ! -e "$STATIC_TARGET/node_modules/$pkgname" ]; then
+      cp -rL "$pkg" "$STATIC_TARGET/node_modules/$pkgname"
+      echo "    + $pkgname"
+    fi
+  done
+  # Also handle scoped packages (@org/pkg)
+  for scope in "$PNPM_HOISTED"/@*; do
+    [ -d "$scope" ] || continue
+    scopename=$(basename "$scope")
+    mkdir -p "$STATIC_TARGET/node_modules/$scopename"
+    for pkg in "$scope"/*; do
+      pkgname=$(basename "$pkg")
+      if [ ! -e "$STATIC_TARGET/node_modules/$scopename/$pkgname" ]; then
+        cp -rL "$pkg" "$STATIC_TARGET/node_modules/$scopename/$pkgname"
+        echo "    + $scopename/$pkgname"
+      fi
+    done
+  done
+fi
+
 # ── Step 5: Resolve symlinks ────────────────────────────────────
 echo ""
 echo "Step 5: Checking for symlinks..."
@@ -189,42 +218,30 @@ echo ""
 echo "Step 7: Configuring Azure remote..."
 
 if [ -z "$AZURE_URL" ]; then
-  if [ "$AUTO_YES" = true ]; then
-    echo "ERROR: AZURE_LOCAL_GIT_REMOTE_URL not set in .env and running in auto mode."
-    echo "  Add it to $APP_DIR/.env or $REPO_ROOT/.env"
-    exit 1
-  fi
-  echo ""
-  echo "AZURE_LOCAL_GIT_REMOTE_URL not found in .env."
-  echo ""
-  echo "To get your Azure Git URL:"
-  echo "  1. Go to Azure Portal > Your App Service > Deployment Center"
-  echo "  2. Select 'Local Git' as source"
-  echo "  3. Copy the Git Clone URL"
-  echo ""
-  read -p "Enter your Azure Git URL: " AZURE_URL
-  if [ -z "$AZURE_URL" ]; then
-    echo "No URL provided. Cannot deploy."
-    exit 1
+  if [ "$AUTO_YES" != true ]; then
+    echo ""
+    echo "AZURE_LOCAL_GIT_REMOTE_URL not found in .env."
+    echo ""
+    echo "To get your Azure Git URL:"
+    echo "  1. Go to Azure Portal > Your App Service > Deployment Center"
+    echo "  2. Select 'Local Git' as source"
+    echo "  3. Copy the Git Clone URL"
+    echo ""
+    read -p "Enter your Azure Git URL (or Enter to skip push): " AZURE_URL
   fi
 fi
-
-git remote add azure "$AZURE_URL"
-echo "  Remote 'azure' -> $AZURE_URL"
-
-# ── Step 8: Stage, commit, push ─────────────────────────────────
-echo ""
-echo "Step 8: Deploying..."
-
-# Get current branch name from the source repo
-CURRENT_BRANCH=$(cd "$REPO_ROOT" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
 # Determine startup command based on nesting
 if [ -n "$NESTED_PATH" ]; then
-  STARTUP_CMD="node $NESTED_PATH/server.js"
+  SERVER_JS_PATH="$NESTED_PATH/server.js"
 else
-  STARTUP_CMD="node server.js"
+  SERVER_JS_PATH="server.js"
 fi
+STARTUP_CMD="node $SERVER_JS_PATH"
+
+# ── Step 8: Stage, commit, push ─────────────────────────────────
+echo ""
+echo "Step 8: Staging and committing..."
 
 # Stage all files
 git add -A
@@ -235,10 +252,21 @@ COMMIT_MSG="${GIT_AUTHOR} $(date '+%Y-%m-%d %H:%M')"
 echo "  Committing: $COMMIT_MSG"
 git commit --allow-empty -m "$COMMIT_MSG"
 
-# Push to Azure
-echo ""
-echo "  Pushing to azure (master) --force..."
-git push azure master --force
+# Push to Azure (skip if no URL)
+if [ -n "$AZURE_URL" ]; then
+  git remote add azure "$AZURE_URL"
+  echo "  Remote 'azure' -> $AZURE_URL"
+  echo ""
+  echo "  Pushing to azure (master) --force..."
+  git push azure master --force
+else
+  echo ""
+  echo "  No Azure URL provided — skipping push."
+  echo "  To push manually later, run:"
+  echo "    cd \"$STANDALONE_DIR\""
+  echo "    git remote add azure <YOUR_AZURE_GIT_URL>"
+  echo "    git push azure master --force"
+fi
 
 echo ""
 echo "=========================================="
@@ -249,9 +277,11 @@ echo "=========================================="
 echo ""
 echo "  Startup command:  $STARTUP_CMD"
 echo ""
-echo "  Test locally:"
+ENV_REL_PATH=$(python3 -c "import os.path; print(os.path.relpath('$REPO_ROOT', '$STANDALONE_DIR'))")
+echo "  Test locally (with env vars):"
 echo "    cd \"$STANDALONE_DIR\""
-echo "    PORT=8080 HOSTNAME=0.0.0.0 $STARTUP_CMD"
+echo "    node --env-file=$ENV_REL_PATH/.env $SERVER_JS_PATH                  # dev env"
+echo "    node --env-file=$ENV_REL_PATH/.env.production $SERVER_JS_PATH       # prod env"
 echo ""
 echo "=========================================="
 echo "  IMPORTANT: Azure App Settings Reminder"
