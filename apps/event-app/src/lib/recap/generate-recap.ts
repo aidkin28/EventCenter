@@ -214,6 +214,13 @@ export async function generateDayRecap(
       stats
     );
 
+    // Pick the most engaged mind map (most nodes)
+    const topMindMap = raw.mindMaps.length > 0
+      ? raw.mindMaps.reduce((best, cur) =>
+          cur.nodes.length > best.nodes.length ? cur : best
+        )
+      : null;
+
     const recap: DayRecapData = {
       conference: raw.event.title,
       day: dayNumber,
@@ -227,6 +234,13 @@ export async function generateDayRecap(
       awards,
       trending,
       wordCloud: wordCloudAndLabels.wordCloud,
+      mindMap: topMindMap
+        ? {
+            groupName: topMindMap.groupName,
+            nodeCount: topMindMap.nodes.length,
+            nodes: topMindMap.nodes,
+          }
+        : undefined,
       generatedAt: new Date().toISOString(),
     };
 

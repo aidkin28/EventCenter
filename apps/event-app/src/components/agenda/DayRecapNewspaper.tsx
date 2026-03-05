@@ -12,6 +12,7 @@ import {
   Bot,
   Flame,
   Loader2,
+  Network,
 } from "lucide-react";
 import type { DayRecapData } from "@/data/recap-types";
 
@@ -282,6 +283,21 @@ export function NewspaperContent({
           </div>
         )}
 
+        {/* ── Mind Map ── */}
+        {recap.mindMap && recap.mindMap.nodes.length > 0 && (
+          <section>
+            <SectionTitle>Most Active Mind Map</SectionTitle>
+            <div className="mt-3 rounded-xl border border-border bg-white p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Network className="h-4 w-4 text-primary/60" />
+                <span className="text-xs font-semibold text-foreground">{recap.mindMap.groupName}</span>
+                <span className="text-[10px] text-muted-foreground">{recap.mindMap.nodeCount} nodes</span>
+              </div>
+              <MindMapTree nodes={recap.mindMap.nodes} />
+            </div>
+          </section>
+        )}
+
         {/* ── Awards ── */}
         {recap.awards.length > 0 && (
           <section>
@@ -363,6 +379,62 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
         {children}
       </h2>
       <div className="flex-1 border-t border-foreground/10" />
+    </div>
+  );
+}
+
+// ─── Mind Map Tree ────────────────────────────────────────────
+
+interface MindMapNode {
+  id: string;
+  parentId: string | null;
+  label: string;
+}
+
+function MindMapTree({ nodes }: { nodes: MindMapNode[] }) {
+  const childrenMap = new Map<string | null, MindMapNode[]>();
+  for (const n of nodes) {
+    const key = n.parentId;
+    if (!childrenMap.has(key)) childrenMap.set(key, []);
+    childrenMap.get(key)!.push(n);
+  }
+
+  // Find roots (parentId is null or parentId not in node set)
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const roots = nodes.filter(
+    (n) => n.parentId === null || !nodeIds.has(n.parentId)
+  );
+
+  function renderBranch(node: MindMapNode, depth: number): React.ReactNode {
+    const children = childrenMap.get(node.id) ?? [];
+    return (
+      <div key={node.id} className={depth > 0 ? "ml-4 border-l border-border/50 pl-3" : ""}>
+        <div className="flex items-center gap-1.5 py-0.5">
+          <div
+            className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+              depth === 0
+                ? "bg-primary"
+                : children.length > 0
+                ? "bg-primary/50"
+                : "bg-muted-foreground/30"
+            }`}
+          />
+          <span
+            className={`text-xs leading-snug ${
+              depth === 0 ? "font-semibold text-foreground" : "text-foreground/70"
+            }`}
+          >
+            {node.label}
+          </span>
+        </div>
+        {children.map((child) => renderBranch(child, depth + 1))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {roots.map((root) => renderBranch(root, 0))}
     </div>
   );
 }

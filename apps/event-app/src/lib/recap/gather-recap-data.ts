@@ -10,6 +10,7 @@ import {
   networkingGroups,
   networkingGroupMembers,
   networkingMessages,
+  networkingMindMapNodes,
   users,
 } from "@/db/schema";
 
@@ -44,6 +45,12 @@ export interface RawRecapData {
   newConnectionsCount: number;
   attendeeCount: number;
   groupCount: number;
+  /** Mind map data per group (groupId → nodes) */
+  mindMaps: {
+    groupId: string;
+    groupName: string;
+    nodes: { id: string; parentId: string | null; label: string }[];
+  }[];
 }
 
 export async function gatherRecapData(
@@ -215,6 +222,35 @@ export async function gatherRecapData(
     .from(networkingGroups)
     .where(eq(networkingGroups.eventId, eventId));
 
+  // 8. Mind map nodes per group
+  const mindMaps =
+    groupIds.length > 0
+      ? await Promise.all(
+          eventGroups.map(async (g) => {
+            const [groupRow] = await db
+              .select({ name: networkingGroups.name })
+              .from(networkingGroups)
+              .where(eq(networkingGroups.id, g.id))
+              .limit(1);
+
+            const nodes = await db
+              .select({
+                id: networkingMindMapNodes.id,
+                parentId: networkingMindMapNodes.parentId,
+                label: networkingMindMapNodes.label,
+              })
+              .from(networkingMindMapNodes)
+              .where(eq(networkingMindMapNodes.groupId, g.id));
+
+            return {
+              groupId: g.id,
+              groupName: groupRow?.name ?? "",
+              nodes,
+            };
+          })
+        )
+      : [];
+
   return {
     event,
     daySessions: enrichedSessions,
@@ -223,5 +259,6 @@ export async function gatherRecapData(
     newConnectionsCount: Number(connResult?.count ?? 0),
     attendeeCount: Number(attResult?.count ?? 0),
     groupCount: Number(grpResult?.count ?? 0),
+    mindMaps: mindMaps.filter((m) => m.nodes.length > 0),
   };
 }

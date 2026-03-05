@@ -753,6 +753,64 @@ function buildPrintHtml(recap: DayRecapData): string {
     )
     .join("");
 
+  // Energy Pulse — bar chart (use pixel heights so they render correctly in print HTML)
+  const barMaxPx = 80;
+  const energyBars = recap.energyCurve
+    .map(
+      (p) => {
+        const barPx = Math.max(Math.round((Math.max(p.level, 2) / 100) * barMaxPx), 2);
+        return `
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;">
+          <div style="height:${barMaxPx}px;display:flex;align-items:flex-end;width:100%;">
+            <div style="width:100%;height:${barPx}px;background:rgba(99,102,241,0.6);border-radius:3px 3px 0 0;"></div>
+          </div>
+          <div style="font-size:8px;color:#888;margin-top:2px;">${p.time.replace(":00", "")}</div>
+        </div>`;
+      }
+    )
+    .join("");
+
+  const energyLabels = recap.energyCurve
+    .filter((p) => p.label && p.level > 30)
+    .map(
+      (p) => `<span style="display:inline-block;font-size:10px;border:1px solid rgba(99,102,241,0.15);background:rgba(99,102,241,0.05);color:rgba(99,102,241,0.7);border-radius:99px;padding:2px 8px;margin:2px;">${p.time.replace(":00", "h")} — ${p.label}</span>`
+    )
+    .join("");
+
+  // Buzz Words
+  const wordCloud = recap.wordCloud
+    .map((w) => {
+      const bg = w.type === "trending"
+        ? "background:rgba(99,102,241,0.1);color:#6366f1;border:1px solid rgba(99,102,241,0.2)"
+        : w.type === "unique"
+        ? "background:#fffbeb;color:#b45309;border:1px solid #fde68a"
+        : "background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb";
+      const size = Math.max(10, 8 + w.weight * 1.5);
+      return `<span style="display:inline-block;border-radius:99px;padding:3px 10px;font-weight:500;font-size:${size}px;${bg};margin:3px;">${w.word}</span>`;
+    })
+    .join("");
+
+  // Unsolved Mysteries
+  const mysteries = recap.mysteries
+    .map(
+      (m) => `
+        <div style="margin:6px 0;padding:10px;border:1px solid #e5e5e5;border-radius:8px;font-size:13px;color:rgba(0,0,0,0.7);break-inside:avoid;">${m}</div>`
+    )
+    .join("");
+
+  // Mind Map
+  const mindMapHtml = recap.mindMap && recap.mindMap.nodes.length > 0
+    ? buildMindMapHtml(recap.mindMap)
+    : "";
+
+  // Trending
+  const trending = recap.trending
+    .slice(0, 12)
+    .map(
+      (t) => `<span style="display:inline-block;border-radius:99px;background:#f3f4f6;border:1px solid #e5e7eb;padding:2px 10px;font-size:11px;font-weight:500;color:rgba(0,0,0,0.6);margin:3px;">${t.word} <span style="color:#999;">&times;${t.count}</span></span>`
+    )
+    .join("");
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -778,9 +836,34 @@ function buildPrintHtml(recap: DayRecapData): string {
       <tr>${statsRow}</tr>
     </table>
 
+    ${recap.energyCurve.length > 0 ? `
+      <h2 class="section">Energy Pulse</h2>
+      <div style="display:flex;align-items:flex-end;gap:2px;margin-top:12px;">${energyBars}</div>
+      ${energyLabels ? `<div style="margin-top:8px;text-align:center;">${energyLabels}</div>` : ""}
+    ` : ""}
+
     ${recap.headlines.length > 0 ? `<h2 class="section">Headlines</h2>${headlines}` : ""}
+
+    ${recap.wordCloud.length > 0 ? `
+      <h2 class="section">Buzz Words</h2>
+      <div style="text-align:center;margin-top:12px;">${wordCloud}</div>
+    ` : ""}
+
     ${recap.topQuotes.length > 0 ? `<h2 class="section">Quoteboard</h2>${quotes}` : ""}
+
+    ${recap.mysteries.length > 0 ? `
+      <h2 class="section">Unsolved Mysteries</h2>
+      ${mysteries}
+    ` : ""}
+
+    ${mindMapHtml}
+
     ${recap.awards.length > 0 ? `<h2 class="section">Day ${recap.day} Awards</h2>${awards}` : ""}
+
+    ${recap.trending.length > 0 ? `
+      <h2 class="section">Trending</h2>
+      <div style="margin-top:12px;text-align:center;">${trending}</div>
+    ` : ""}
 
     <div style="text-align:center;margin-top:32px;padding-top:12px;border-top:1px solid #ddd;">
       <p style="font-size:9px;color:#999;letter-spacing:1px;">AI-GENERATED RECAP &bull; ${recap.generatedAt ? new Date(recap.generatedAt).toLocaleString() : ""}</p>
@@ -788,4 +871,46 @@ function buildPrintHtml(recap: DayRecapData): string {
   </div>
 </body>
 </html>`;
+}
+
+function buildMindMapHtml(mindMap: NonNullable<DayRecapData["mindMap"]>): string {
+  const childrenMap = new Map<string | null, typeof mindMap.nodes>();
+  for (const n of mindMap.nodes) {
+    const key = n.parentId;
+    if (!childrenMap.has(key)) childrenMap.set(key, []);
+    childrenMap.get(key)!.push(n);
+  }
+
+  const nodeIds = new Set(mindMap.nodes.map((n) => n.id));
+  const roots = mindMap.nodes.filter(
+    (n) => n.parentId === null || !nodeIds.has(n.parentId)
+  );
+
+  function renderBranch(node: typeof mindMap.nodes[0], depth: number): string {
+    const children = childrenMap.get(node.id) ?? [];
+    const dotColor = depth === 0 ? "#6366f1" : children.length > 0 ? "rgba(99,102,241,0.5)" : "rgba(0,0,0,0.15)";
+    const fontWeight = depth === 0 ? "600" : "400";
+    const color = depth === 0 ? "#111" : "rgba(0,0,0,0.6)";
+    const indent = depth > 0
+      ? `style="margin-left:16px;padding-left:12px;border-left:1px solid #e5e7eb;"`
+      : "";
+
+    return `<div ${indent}>
+      <div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
+        <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
+        <span style="font-size:12px;font-weight:${fontWeight};color:${color};">${node.label}</span>
+      </div>
+      ${children.map((c) => renderBranch(c, depth + 1)).join("")}
+    </div>`;
+  }
+
+  return `
+    <h2 class="section">Most Active Mind Map</h2>
+    <div style="margin-top:12px;border:1px solid #e5e7eb;border-radius:12px;padding:16px;background:#fff;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span style="font-size:12px;font-weight:600;color:#111;">${mindMap.groupName}</span>
+        <span style="font-size:10px;color:#999;">${mindMap.nodeCount} nodes</span>
+      </div>
+      ${roots.map((r) => renderBranch(r, 0)).join("")}
+    </div>`;
 }

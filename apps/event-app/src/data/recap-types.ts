@@ -29,5 +29,14 @@ export interface DayRecapData {
     weight: number;
     type: "trending" | "unique" | "common";
   }[];
+  mindMap?: {
+    groupName: string;
+    nodeCount: number;
+    nodes: {
+      id: string;
+      parentId: string | null;
+      label: string;
+    }[];
+  };
   generatedAt: string;
 }
