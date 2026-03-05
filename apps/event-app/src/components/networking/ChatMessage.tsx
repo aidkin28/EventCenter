@@ -1,10 +1,16 @@
 "use client";
 
-import type { NetworkingMessage } from "@/lib/stores/networkingStore";
 import { cn } from "@/lib/utils";
 
+export interface ChatMessageData {
+  userName: string;
+  content: string;
+  isAiSummary: boolean;
+  createdAt: string;
+}
+
 interface ChatMessageProps {
-  message: NetworkingMessage;
+  message: ChatMessageData;
 }
 
 function getInitials(name: string): string {

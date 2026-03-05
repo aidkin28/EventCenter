@@ -8,9 +8,11 @@ import {
   text,
   timestamp,
   date,
+  jsonb,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { DayRecapData } from "@/data/recap-types";
 import { attendees } from "./attendees";
 
 //==================================================
@@ -26,6 +28,9 @@ export const events = pgTable(
     endDate: date("end_date").notNull(),
     venue: varchar("venue", { length: 500 }),
     location: varchar("location", { length: 500 }),
+    recaps: jsonb("recaps")
+      .$type<Record<string, "loading" | DayRecapData>>()
+      .default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

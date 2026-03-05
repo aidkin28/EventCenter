@@ -11,6 +11,7 @@ import {
   date,
   jsonb,
   integer,
+  boolean,
   index,
   uniqueIndex
 } from "drizzle-orm/pg-core";
@@ -116,6 +117,7 @@ export const sessionComments = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
+    isAiSummary: boolean("is_ai_summary").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

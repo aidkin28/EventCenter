@@ -75,7 +75,7 @@ export async function DELETE(
     });
 
     if (!group) return commonErrors.notFound("Group");
-    if (group.creatorId !== user.id) return commonErrors.forbidden();
+    if (group.creatorId !== user.id && user.role !== "admin") return commonErrors.forbidden();
 
     await db.delete(networkingGroups).where(eq(networkingGroups.id, groupId));
 

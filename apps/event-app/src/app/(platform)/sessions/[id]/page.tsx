@@ -9,6 +9,7 @@ import { useEventStore } from "@/lib/stores/eventStore";
 import { useEventSessions } from "@/hooks/useEventData";
 import { formatTimeRange } from "@/lib/time";
 import { format } from "date-fns";
+import { SessionChat } from "@/components/sessions/SessionChat";
 
 const TRACK_BADGE_COLORS: Record<string, string> = {
   Leadership: "bg-red-50 text-red-700 border-red-200",
@@ -40,7 +41,7 @@ export default function SessionDetailPage({
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-4xl">
         <Link
           href={back.href}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -57,7 +58,7 @@ export default function SessionDetailPage({
 
   if (!session) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-4xl">
         <Link
           href={back.href}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -85,7 +86,7 @@ export default function SessionDetailPage({
   })();
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       {/* Back link */}
       <Link
         href={back.href}
@@ -167,6 +168,9 @@ export default function SessionDetailPage({
           {session.description}
         </p>
       </div>
+
+      {/* Chat */}
+      <SessionChat sessionId={id} />
     </div>
   );
 }

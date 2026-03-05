@@ -33,7 +33,7 @@ export function SessionBlock({ session, speakers, from }: SessionBlockProps) {
   return (
     <Link
       href={href}
-      className="group block w-full rounded-2xl bg-gradient-to-br from-white to-gray-50/80 p-3.5 shadow-sm ring-1 ring-black/[0.04] transition-all duration-200 hover:shadow-md hover:ring-black/[0.08]"
+      className="group block w-full rounded-2xl border border-border bg-gradient-to-br from-primary/[0.03] to-transparent p-3.5 shadow-sm ring-1 ring-black/[0.04] transition-all duration-200 hover:shadow-md hover:ring-black/[0.08]"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">

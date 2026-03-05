@@ -1,6 +1,7 @@
 "use client";
 
 import { useNetworkingStore } from "@/lib/stores/networkingStore";
+import { authClient } from "@/lib/auth-client";
 import { NetworkingGroupCard } from "./NetworkingGroupCard";
 import { NetworkingSkeleton } from "@/components/skeletons/NetworkingSkeleton";
 
@@ -12,6 +13,8 @@ export function NetworkingGroupList({ onGroupClick }: NetworkingGroupListProps) 
   const groups = useNetworkingStore((s) => s.groups);
   const groupsLoading = useNetworkingStore((s) => s.groupsLoading);
   const previewGroupId = useNetworkingStore((s) => s.previewGroupId);
+  const { data: session } = authClient.useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
 
   if (groupsLoading && groups.length === 0) {
     return <NetworkingSkeleton />;
@@ -35,6 +38,7 @@ export function NetworkingGroupList({ onGroupClick }: NetworkingGroupListProps) 
           key={group.id}
           group={group}
           isSelected={group.id === previewGroupId}
+          isAdmin={isAdmin}
           onSelect={() => onGroupClick?.(group.id)}
         />
       ))}

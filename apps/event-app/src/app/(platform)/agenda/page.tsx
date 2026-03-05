@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@common/components/ui/Tabs";
 import { cn } from "@common/lib/utils";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EventOverview } from "@/components/agenda/EventOverview";
 import { DayCalendar } from "@/components/agenda/DayCalendar";
-import { DayRecapPopup } from "@/components/agenda/DayRecapPopup";
-import { DAY_RECAPS } from "@/data/day-recaps";
+import { DayRecapNewspaper } from "@/components/agenda/DayRecapNewspaper";
 import { useEventStore } from "@/lib/stores/eventStore";
 import { useEventSessions } from "@/hooks/useEventData";
-import { FileText } from "lucide-react";
+import { useRecap } from "@/hooks/useRecap";
+import { FileText, Loader2 } from "lucide-react";
 import { AgendaSkeleton } from "@/components/skeletons/AgendaSkeleton";
 
 export default function AgendaPage() {
@@ -19,7 +19,7 @@ export default function AgendaPage() {
   const { data: sessions, isLoading } = useEventSessions(currentEvent?.id);
 
   const [activeDayIndex, setActiveDayIndex] = useState(0);
-  const [recapDay, setRecapDay] = useState<1 | 2 | 3 | null>(null);
+  const [recapDate, setRecapDate] = useState<string | null>(null);
 
   // Derive unique sorted dates from sessions
   const days = useMemo(() => {
@@ -49,6 +49,35 @@ export default function AgendaPage() {
         return true;
       });
   }, [activeDate, sessionsByDate]);
+
+  // Figure out which days are in the past
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const pastDays = useMemo(() => days.filter((d) => d < today), [days, today]);
+
+  // Auto-trigger recap generation for past days
+  useEffect(() => {
+    if (!currentEvent?.id || pastDays.length === 0) return;
+    for (const date of pastDays) {
+      fetch(`/api/events/${currentEvent.id}/recap?date=${date}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.status === "not_started") {
+            fetch(`/api/events/${currentEvent.id}/recap`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ date }),
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentEvent?.id, pastDays]);
+
+  // Recap hook for the currently selected recap date
+  const { recap, isLoading: recapLoading } = useRecap(
+    currentEvent?.id,
+    recapDate
+  );
 
   const formatDayLabel = (dateStr: string, dayNum: number) => {
     const date = new Date(dateStr + "T12:00:00");
@@ -92,13 +121,13 @@ export default function AgendaPage() {
               >
                 {formatDayLabel(date, i + 1)}
               </TabsTrigger>
-              {i === 0 && (
+              {date < today && (
                 <button
-                  onClick={() => setRecapDay(1)}
+                  onClick={() => setRecapDate(date)}
                   className="flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary/[0.04] px-2.5 py-1 text-[11px] font-medium text-primary transition-all hover:bg-primary/10 hover:border-primary/25"
                 >
                   <FileText className="h-3 w-3" />
-                  Day 1 Recap
+                  Day {i + 1} Recap
                 </button>
               )}
             </div>
@@ -112,10 +141,11 @@ export default function AgendaPage() {
         ))}
       </Tabs>
 
-      <DayRecapPopup
-        recap={recapDay ? DAY_RECAPS.find((r) => r.day === recapDay) : undefined}
-        open={recapDay !== null}
-        onClose={() => setRecapDay(null)}
+      <DayRecapNewspaper
+        recap={recap}
+        isLoading={recapLoading}
+        open={recapDate !== null}
+        onClose={() => setRecapDate(null)}
       />
     </>
   );
