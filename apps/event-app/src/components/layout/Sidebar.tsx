@@ -63,8 +63,11 @@ export function Sidebar() {
 
   const currentEvent = useEventStore((s) => s.currentEvent);
   const userEvents = useEventStore((s) => s.userEvents);
+  const isLoading = useEventStore((s) => s.isLoading);
   const fetchUserEvents = useEventStore((s) => s.fetchUserEvents);
   const switchEvent = useEventStore((s) => s.switchEvent);
+
+  const hasNoEvents = !isLoading && userEvents.length === 0 && !currentEvent;
 
   useEffect(() => {
     fetchUserEvents();
@@ -141,12 +144,12 @@ export function Sidebar() {
             <Image src="/scotia_logo.png" alt="Event Logo" width={32} height={32} unoptimized className="h-8 w-8 rounded-lg" />
             <div>
               <h1 className="text-sm font-semibold tracking-tight text-foreground">
-                {currentEvent?.title ?? "Event Center"}
+                {currentEvent?.title ?? (hasNoEvents ? "Please Select an Event" : "Event Center")}
               </h1>
               <p className="text-[11px] text-muted-foreground">
                 {currentEvent
                   ? formatEventDates(currentEvent.startDate, currentEvent.endDate)
-                  : ""}
+                  : hasNoEvents ? "Join an event to get started" : ""}
               </p>
             </div>
           </div>
@@ -157,7 +160,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {NAV_ITEMS.map((item) => {
+          {!hasNoEvents && NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
