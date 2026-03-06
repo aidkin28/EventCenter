@@ -4,9 +4,10 @@ set -euo pipefail
 # ── Deploy Next.js standalone to Azure Local Git ────────────────
 #
 # Usage:
-#   ./deploy.sh              # interactive, production build
+#   ./deploy.sh              # interactive, production build + push
 #   ./deploy.sh -y           # auto-confirm all prompts
 #   ./deploy.sh --dev        # use dev env (.env) instead of .env.production
+#   ./deploy.sh --build-only # build standalone artifact, skip git/push (for local testing)
 #   ./deploy.sh -y --dev     # auto + dev
 #
 # Requires:
@@ -15,11 +16,13 @@ set -euo pipefail
 # ── Parse flags ─────────────────────────────────────────────────
 AUTO_YES=false
 USE_PROD_ENV=true
+BUILD_ONLY=false
 
 for arg in "$@"; do
   case "$arg" in
-    -y|--yes)   AUTO_YES=true ;;
-    --dev)      USE_PROD_ENV=false ;;
+    -y|--yes)        AUTO_YES=true ;;
+    --dev)           USE_PROD_ENV=false ;;
+    --build-only)    BUILD_ONLY=true ;;
   esac
 done
 
@@ -32,10 +35,11 @@ echo "=========================================="
 echo "  Next.js Standalone → Azure Local Git"
 echo "=========================================="
 echo ""
-echo "  App dir:   $APP_DIR"
-echo "  Repo root: $REPO_ROOT"
-echo "  Prod env:  $USE_PROD_ENV"
-echo "  Auto mode: $AUTO_YES"
+echo "  App dir:    $APP_DIR"
+echo "  Repo root:  $REPO_ROOT"
+echo "  Prod env:   $USE_PROD_ENV"
+echo "  Auto mode:  $AUTO_YES"
+echo "  Build only: $BUILD_ONLY"
 
 # ── Step 1: Load AZURE_LOCAL_GIT_REMOTE_URL ─────────────────────
 echo ""
@@ -204,33 +208,6 @@ FILE_COUNT=$(find "$STANDALONE_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
 SIZE=$(du -sh "$STANDALONE_DIR" | cut -f1)
 echo "  $FILE_COUNT files, $SIZE total"
 
-# ── Step 6: Git init in standalone dir ──────────────────────────
-echo ""
-echo "Step 6: Initializing git in standalone artifact..."
-cd "$STANDALONE_DIR"
-
-# Always re-init since next build recreates .next/standalone from scratch
-rm -rf .git
-git init -b master
-
-# ── Step 7: Set up Azure remote ─────────────────────────────────
-echo ""
-echo "Step 7: Configuring Azure remote..."
-
-if [ -z "$AZURE_URL" ]; then
-  if [ "$AUTO_YES" != true ]; then
-    echo ""
-    echo "AZURE_LOCAL_GIT_REMOTE_URL not found in .env."
-    echo ""
-    echo "To get your Azure Git URL:"
-    echo "  1. Go to Azure Portal > Your App Service > Deployment Center"
-    echo "  2. Select 'Local Git' as source"
-    echo "  3. Copy the Git Clone URL"
-    echo ""
-    read -p "Enter your Azure Git URL (or Enter to skip push): " AZURE_URL
-  fi
-fi
-
 # Determine startup command based on nesting
 if [ -n "$NESTED_PATH" ]; then
   SERVER_JS_PATH="$NESTED_PATH/server.js"
@@ -239,39 +216,73 @@ else
 fi
 STARTUP_CMD="node $SERVER_JS_PATH"
 
-# ── Step 8: Stage, commit, push ─────────────────────────────────
-echo ""
-echo "Step 8: Staging and committing..."
-
-# Stage all files
-git add -A
-
-# Commit with git author name + date
-GIT_AUTHOR=$(cd "$REPO_ROOT" && git config user.name 2>/dev/null || echo "deploy")
-COMMIT_MSG="${GIT_AUTHOR} $(date '+%Y-%m-%d %H:%M')"
-echo "  Committing: $COMMIT_MSG"
-git commit --allow-empty -m "$COMMIT_MSG"
-
-# Push to Azure (skip if no URL)
-if [ -n "$AZURE_URL" ]; then
-  git remote add azure "$AZURE_URL"
-  echo "  Remote 'azure' -> $AZURE_URL"
+if [ "$BUILD_ONLY" = true ]; then
   echo ""
-  echo "  Pushing to azure (master) --force..."
-  git push azure master --force
+  echo "=========================================="
+  echo "  Build complete! (--build-only, skipping git/push)"
+  echo "=========================================="
 else
+  # ── Step 6: Git init in standalone dir ──────────────────────────
   echo ""
-  echo "  No Azure URL provided — skipping push."
-  echo "  To push manually later, run:"
-  echo "    cd \"$STANDALONE_DIR\""
-  echo "    git remote add azure <YOUR_AZURE_GIT_URL>"
-  echo "    git push azure master --force"
-fi
+  echo "Step 6: Initializing git in standalone artifact..."
+  cd "$STANDALONE_DIR"
 
-echo ""
-echo "=========================================="
-echo "  Deployment complete!"
-echo "=========================================="
+  # Always re-init since next build recreates .next/standalone from scratch
+  rm -rf .git
+  git init -b master
+
+  # ── Step 7: Set up Azure remote ─────────────────────────────────
+  echo ""
+  echo "Step 7: Configuring Azure remote..."
+
+  if [ -z "$AZURE_URL" ]; then
+    if [ "$AUTO_YES" != true ]; then
+      echo ""
+      echo "AZURE_LOCAL_GIT_REMOTE_URL not found in .env."
+      echo ""
+      echo "To get your Azure Git URL:"
+      echo "  1. Go to Azure Portal > Your App Service > Deployment Center"
+      echo "  2. Select 'Local Git' as source"
+      echo "  3. Copy the Git Clone URL"
+      echo ""
+      read -p "Enter your Azure Git URL (or Enter to skip push): " AZURE_URL
+    fi
+  fi
+
+  # ── Step 8: Stage, commit, push ─────────────────────────────────
+  echo ""
+  echo "Step 8: Staging and committing..."
+
+  # Stage all files
+  git add -A
+
+  # Commit with git author name + date
+  GIT_AUTHOR=$(cd "$REPO_ROOT" && git config user.name 2>/dev/null || echo "deploy")
+  COMMIT_MSG="${GIT_AUTHOR} $(date '+%Y-%m-%d %H:%M')"
+  echo "  Committing: $COMMIT_MSG"
+  git commit --allow-empty -m "$COMMIT_MSG"
+
+  # Push to Azure (skip if no URL)
+  if [ -n "$AZURE_URL" ]; then
+    git remote add azure "$AZURE_URL"
+    echo "  Remote 'azure' -> $AZURE_URL"
+    echo ""
+    echo "  Pushing to azure (master) --force..."
+    git push azure master --force
+  else
+    echo ""
+    echo "  No Azure URL provided — skipping push."
+    echo "  To push manually later, run:"
+    echo "    cd \"$STANDALONE_DIR\""
+    echo "    git remote add azure <YOUR_AZURE_GIT_URL>"
+    echo "    git push azure master --force"
+  fi
+
+  echo ""
+  echo "=========================================="
+  echo "  Deployment complete!"
+  echo "=========================================="
+fi
 
 # ── Post-deploy info ────────────────────────────────────────────
 ENV_REL_PATH=$(python3 -c "import os.path; print(os.path.relpath('$REPO_ROOT', '$STANDALONE_DIR'))")
